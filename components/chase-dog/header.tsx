@@ -5,8 +5,8 @@ export function Header() {
         Chase Dog
       </h1>
       <p className="mt-3 sm:mt-4 text-base sm:text-lg md:text-xl text-chase-muted font-medium tracking-wide">
-        Click to make Chase bark!
+        Click to make Chase smile!
       </p>
     </div>
-  )
+  );
 }
