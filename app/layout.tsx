@@ -43,7 +43,9 @@ export default function RootLayout({
           }}
           enableUnlimited
         >
-          <SessionButton />
+          <div className="fixed top-0 right-0 z-50 flex justify-end items-center p-4 md:p-6">
+            <SessionButton />
+          </div>
           {children}
           <Analytics />
         </FogoSessionProvider>

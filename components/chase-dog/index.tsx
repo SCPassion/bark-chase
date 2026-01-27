@@ -20,7 +20,7 @@ export function ChaseDog() {
   }, [])
 
   return (
-    <div className="flex flex-col items-center gap-8">
+    <div className="flex flex-col items-center gap-6 sm:gap-8 md:gap-10 w-full max-w-4xl mx-auto">
       <Header />
       
       <ClickableArea
