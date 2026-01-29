@@ -25,6 +25,26 @@ export const ensureUserRecord = mutation({
 });
 
 /**
+ * Increment click count for the user (call after a successful "burn" of 1 $CHASE).
+ */
+export const incrementClickCount = mutation({
+  args: { solanaAddress: v.string() },
+  handler: async (ctx, { solanaAddress }) => {
+    const user = await ctx.db
+      .query("chaseUsers")
+      .withIndex("by_solana_address", (q) => q.eq("solanaAddress", solanaAddress))
+      .first();
+
+    if (!user) return null;
+
+    await ctx.db.patch(user._id, {
+      clickCount: user.clickCount + 1,
+    });
+    return user._id;
+  },
+});
+
+/**
  * Get user record by Solana address (for reading click count).
  */
 export const getBySolanaAddress = query({

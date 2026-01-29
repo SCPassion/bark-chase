@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useSession, isEstablished } from "@fogo/sessions-sdk-react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { burnOneChaseToken } from "@/lib/burn-chase-token";
 import { DogImage } from "./dog-image";
 import { ClickableArea } from "./clickable-area";
 import { BarkCounter } from "./bark-counter";
@@ -9,9 +12,26 @@ import { BarkCounter } from "./bark-counter";
 export function ChaseDog() {
   const sessionState = useSession();
   const [isMouthOpen, setIsMouthOpen] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isLoggedIn = isEstablished(sessionState);
+  const solanaAddress = isLoggedIn ? sessionState.walletPublicKey.toBase58() : null;
+
+  const userRecord = useQuery(
+    api.users.getBySolanaAddress,
+    solanaAddress ? { solanaAddress } : "skip"
+  );
+  const incrementClickCount = useMutation(api.users.incrementClickCount);
+
+  const clickCount = userRecord?.clickCount ?? 0;
+  const isConvexLoading = isLoggedIn && userRecord === undefined;
+  const isCountLoading = isInitialLoad || isConvexLoading;
+
+  // Clear initial load blur after first paint / short delay
+  useEffect(() => {
+    const t = setTimeout(() => setIsInitialLoad(false), 300);
+    return () => clearTimeout(t);
+  }, []);
 
   // Initialize audio element
   useEffect(() => {
@@ -26,21 +46,24 @@ export function ChaseDog() {
     };
   }, []);
 
-  const handleInteractionStart = useCallback(() => {
-    if (!isLoggedIn) return;
+  const handleInteractionStart = useCallback(async () => {
+    if (!isLoggedIn || !solanaAddress) return;
 
     setIsMouthOpen(true);
-    setClickCount((prev) => prev + 1);
 
     // Play audio, restarting if already playing
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch((error) => {
-        // Handle autoplay restrictions gracefully
         console.warn("Audio playback failed:", error);
       });
     }
-  }, [isLoggedIn]);
+
+    const burnSuccess = await burnOneChaseToken(solanaAddress);
+    if (burnSuccess) {
+      await incrementClickCount({ solanaAddress });
+    }
+  }, [isLoggedIn, solanaAddress, incrementClickCount]);
 
   const handleInteractionEnd = useCallback(() => {
     setIsMouthOpen(false);
@@ -61,7 +84,9 @@ export function ChaseDog() {
         <DogImage isMouthOpen={isMouthOpen} />
       </ClickableArea>
 
-      <BarkCounter count={clickCount} />
+      {isLoggedIn && (
+        <BarkCounter count={clickCount} isLoading={isCountLoading} />
+      )}
     </div>
   );
 }
