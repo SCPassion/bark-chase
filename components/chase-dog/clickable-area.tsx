@@ -16,7 +16,7 @@ export function ClickableArea({
   return (
     <button
       type="button"
-      className="relative cursor-pointer select-none transition-transform active:scale-95 focus:outline-none rounded-2xl overflow-hidden shadow-2xl ring-4 ring-chase-accent/30 hover:ring-chase-accent/50 transition-all duration-200"
+      className="relative cursor-pointer select-none transition-transform active:scale-95 focus:outline-none rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl ring-2 sm:ring-4 ring-chase-accent/30 hover:ring-chase-accent/50 focus-visible:ring-chase-accent/70 transition-all duration-200"
       onMouseDown={onInteractionStart}
       onMouseUp={onInteractionEnd}
       onMouseLeave={onInteractionEnd}
