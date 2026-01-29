@@ -1,14 +1,8 @@
 import React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
-import { NATIVE_MINT } from "@solana/spl-token";
-import {
-  FogoSessionProvider,
-  SessionButton,
-  Network,
-} from "@fogo/sessions-sdk-react";
+import { Providers } from "@/components/providers";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -26,29 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        <FogoSessionProvider
-          network={Network.Mainnet}
-          domain={
-            process.env.NODE_ENV === "production"
-              ? undefined
-              : "https://sessions-example.fogo.io"
-          }
-          tokens={[
-            NATIVE_MINT.toBase58(),
-            "fUSDNGgHkZfwckbr5RLLvRbvqvRcTLdH9hcHJiq4jry",
-          ]}
-          defaultRequestedLimits={{
-            [NATIVE_MINT.toBase58()]: BigInt(1_500_000_000),
-            fUSDNGgHkZfwckbr5RLLvRbvqvRcTLdH9hcHJiq4jry: BigInt(1_000_000_000),
-          }}
-          enableUnlimited
-        >
-          <div className="fixed top-0 right-0 z-50 flex justify-end items-center p-4 md:p-6">
-            <SessionButton />
-          </div>
-          {children}
-          <Analytics />
-        </FogoSessionProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
