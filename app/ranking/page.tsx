@@ -4,10 +4,18 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import Link from "next/link";
-import { Trophy, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Trophy,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Wallet,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const PAGE_SIZE = 100;
+
+type RankMode = "address" | "country";
 
 function truncateAddress(addr: string) {
   if (addr.length <= 12) return addr;
@@ -15,14 +23,24 @@ function truncateAddress(addr: string) {
 }
 
 export default function RankingPage() {
+  const [mode, setMode] = useState<RankMode>("address");
   const [page, setPage] = useState(1);
-  const result = useQuery(api.users.getLeaderboardPage, { page });
+
+  const addressResult = useQuery(api.users.getLeaderboardPage, { page });
+  const countryResult = useQuery(api.users.getCountryLeaderboardPage, { page });
+
+  const result = mode === "address" ? addressResult : countryResult;
 
   const totalPages = result
     ? Math.max(1, Math.ceil(result.totalCount / PAGE_SIZE))
     : 1;
   const startRank = (page - 1) * PAGE_SIZE + 1;
   const endRank = Math.min(page * PAGE_SIZE, result?.totalCount ?? 0);
+
+  const setModeAndResetPage = (m: RankMode) => {
+    setMode(m);
+    setPage(1);
+  };
 
   return (
     <main className="min-h-screen bg-chase-bg pt-20 md:pt-24 pb-12 px-4 sm:px-6 md:px-8">
@@ -34,8 +52,37 @@ export default function RankingPage() {
           </h1>
         </div>
 
+        <div className="flex justify-center gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => setModeAndResetPage("address")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              mode === "address"
+                ? "bg-chase-accent text-white"
+                : "border-2 border-chase-accent/30 text-chase-muted hover:text-chase-text hover:border-chase-accent/50"
+            }`}
+          >
+            <Wallet className="w-4 h-4" />
+            By address
+          </button>
+          <button
+            type="button"
+            onClick={() => setModeAndResetPage("country")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              mode === "country"
+                ? "bg-chase-accent text-white"
+                : "border-2 border-chase-accent/30 text-chase-muted hover:text-chase-text hover:border-chase-accent/50"
+            }`}
+          >
+            <MapPin className="w-4 h-4" />
+            By country
+          </button>
+        </div>
+
         <p className="text-center text-chase-muted text-sm md:text-base mb-6">
-          Total barks ranked by user's svm address.
+          {mode === "address"
+            ? "Total barks ranked by Solana (SVM) address."
+            : "Total barks ranked by country (from IP at click time)."}
         </p>
 
         {result === undefined ? (
@@ -92,7 +139,7 @@ export default function RankingPage() {
                         Rank
                       </th>
                       <th className="py-3 px-4 text-center text-xs font-semibold text-chase-muted uppercase tracking-wider">
-                        Address
+                        {mode === "address" ? "Address" : "Country"}
                       </th>
                       <th className="py-3 px-4 text-center text-xs font-semibold text-chase-muted uppercase tracking-wider w-28">
                         Barks
@@ -100,22 +147,39 @@ export default function RankingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.entries.map((row) => (
-                      <tr
-                        key={row.solanaAddress}
-                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                      >
-                        <td className="py-3 px-4 text-center font-bold text-chase-accent tabular-nums">
-                          #{row.rank}
-                        </td>
-                        <td className="py-3 px-4 text-center text-chase-text font-mono text-sm">
-                          {truncateAddress(row.solanaAddress)}
-                        </td>
-                        <td className="py-3 px-4 text-center text-chase-text tabular-nums font-medium">
-                          {row.clickCount.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
+                    {mode === "address"
+                      ? addressResult!.entries.map((row) => (
+                          <tr
+                            key={row.solanaAddress}
+                            className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                          >
+                            <td className="py-3 px-4 text-center font-bold text-chase-accent tabular-nums">
+                              #{row.rank}
+                            </td>
+                            <td className="py-3 px-4 text-center text-chase-text font-mono text-sm">
+                              {truncateAddress(row.solanaAddress)}
+                            </td>
+                            <td className="py-3 px-4 text-center text-chase-text tabular-nums font-medium">
+                              {row.clickCount.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      : countryResult!.entries.map((row) => (
+                          <tr
+                            key={row.countryCode}
+                            className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                          >
+                            <td className="py-3 px-4 text-center font-bold text-chase-accent tabular-nums">
+                              #{row.rank}
+                            </td>
+                            <td className="py-3 px-4 text-center text-chase-text">
+                              {row.countryName} ({row.countryCode})
+                            </td>
+                            <td className="py-3 px-4 text-center text-chase-text tabular-nums font-medium">
+                              {row.clickCount.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
                   </tbody>
                 </table>
               </div>

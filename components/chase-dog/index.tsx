@@ -5,6 +5,7 @@ import { useSession, isEstablished } from "@fogo/sessions-sdk-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { burnOneChaseToken } from "@/lib/burn-chase-token";
+import { getCountryFromIp } from "@/lib/get-country-from-ip";
 import { DogImage } from "./dog-image";
 import { ClickableArea } from "./clickable-area";
 import { BarkCounter } from "./bark-counter";
@@ -14,12 +15,18 @@ export function ChaseDog() {
   const [isMouthOpen, setIsMouthOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const countryRef = useRef<{
+    countryCode: string;
+    countryName: string;
+  } | null>(null);
   const isLoggedIn = isEstablished(sessionState);
-  const solanaAddress = isLoggedIn ? sessionState.walletPublicKey.toBase58() : null;
+  const solanaAddress = isLoggedIn
+    ? sessionState.walletPublicKey.toBase58()
+    : null;
 
   const userRecord = useQuery(
     api.users.getBySolanaAddress,
-    solanaAddress ? { solanaAddress } : "skip"
+    solanaAddress ? { solanaAddress } : "skip",
   );
   const incrementClickCount = useMutation(api.users.incrementClickCount);
 
@@ -61,7 +68,18 @@ export function ChaseDog() {
 
     const burnSuccess = await burnOneChaseToken(solanaAddress);
     if (burnSuccess) {
-      await incrementClickCount({ solanaAddress });
+      let country = countryRef.current;
+      if (!country) {
+        country = await getCountryFromIp();
+        if (country) countryRef.current = country;
+      }
+      await incrementClickCount({
+        solanaAddress,
+        ...(country && {
+          countryCode: country.countryCode,
+          countryName: country.countryName,
+        }),
+      });
     }
   }, [isLoggedIn, solanaAddress, incrementClickCount]);
 
@@ -73,7 +91,8 @@ export function ChaseDog() {
     <div className="flex flex-col items-center gap-6 sm:gap-8 md:gap-10 w-full max-w-4xl mx-auto">
       {!isLoggedIn && (
         <p className="text-center text-sm sm:text-base text-white font-medium px-4 py-3 rounded-lg bg-gray-900 border-2 border-chase-accent shadow-2xl max-w-md">
-          Sign in with your Fogo wallet (top right) to start playing and make Chase smile!
+          Sign in with your Fogo wallet (top right) to start playing and make
+          Chase smile!
         </p>
       )}
       <ClickableArea

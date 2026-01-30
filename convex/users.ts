@@ -28,10 +28,16 @@ export const ensureUserRecord = mutation({
 
 /**
  * Increment click count for the user (call after a successful "burn" of 1 $CHASE).
+ * Pass country from current IP at click time so each click is attributed to where the user is now.
+ * Hong Kong today → 10 clicks to HK; Vienna tomorrow → 5 clicks to Austria; no retroactive change.
  */
 export const incrementClickCount = mutation({
-  args: { solanaAddress: v.string() },
-  handler: async (ctx, { solanaAddress }) => {
+  args: {
+    solanaAddress: v.string(),
+    countryCode: v.optional(v.string()),
+    countryName: v.optional(v.string()),
+  },
+  handler: async (ctx, { solanaAddress, countryCode, countryName }) => {
     const user = await ctx.db
       .query("chaseUsers")
       .withIndex("by_solana_address", (q) =>
@@ -44,6 +50,31 @@ export const incrementClickCount = mutation({
     await ctx.db.patch(user._id, {
       clickCount: user.clickCount + 1,
     });
+
+    if (countryCode != null && countryCode !== "") {
+      let country = await ctx.db
+        .query("countryClicks")
+        .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
+        .first();
+      if (!country) {
+        await ctx.db.insert("countryClicks", {
+          countryCode,
+          countryName: countryName ?? countryCode,
+          clickCount: 0,
+        });
+        country = await ctx.db
+          .query("countryClicks")
+          .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
+          .first();
+      }
+      if (country) {
+        await ctx.db.patch(country._id, {
+          clickCount: country.clickCount + 1,
+          ...(countryName != null && { countryName }),
+        });
+      }
+    }
+
     return user._id;
   },
 });
@@ -99,6 +130,27 @@ export const getLeaderboardPage = query({
       rank: start + i + 1,
       solanaAddress: u.solanaAddress,
       clickCount: u.clickCount,
+    }));
+    return { entries, totalCount, page, pageSize: PAGE_SIZE };
+  },
+});
+
+/**
+ * Get one page of the country leaderboard (1-100, 101-200, etc.). Page is 1-based.
+ */
+export const getCountryLeaderboardPage = query({
+  args: { page: v.number() },
+  handler: async (ctx, { page }) => {
+    const all = await ctx.db.query("countryClicks").collect();
+    all.sort((a, b) => b.clickCount - a.clickCount);
+    const totalCount = all.length;
+    const start = (page - 1) * PAGE_SIZE;
+    const slice = all.slice(start, start + PAGE_SIZE);
+    const entries = slice.map((c, i) => ({
+      rank: start + i + 1,
+      countryCode: c.countryCode,
+      countryName: c.countryName,
+      clickCount: c.clickCount,
     }));
     return { entries, totalCount, page, pageSize: PAGE_SIZE };
   },
