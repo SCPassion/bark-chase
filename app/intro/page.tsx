@@ -343,7 +343,7 @@ export default function IntroPage() {
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
             <a
-              href="https://birdeye.so"
+              href="https://birdeye.so/fogo/token/GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz"
               target="_blank"
               rel="noopener noreferrer"
               className="text-chase-accent hover:underline inline-flex items-center gap-1"
