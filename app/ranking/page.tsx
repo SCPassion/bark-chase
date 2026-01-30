@@ -41,16 +41,16 @@ export default function RankingPage() {
         {result === undefined ? (
           <div className="rounded-lg overflow-hidden border-2 border-chase-accent/30 bg-gray-900/50">
             <div className="overflow-x-auto">
-              <table className="w-full text-center">
+              <table className="w-full table-fixed">
                 <thead>
                   <tr className="border-b border-white/10 bg-chase-accent/10">
-                    <th className="py-3 px-4 w-20">
+                    <th className="py-3 px-4 text-center w-24">
                       <Skeleton className="h-4 w-12 mx-auto" />
                     </th>
-                    <th className="py-3 px-4">
+                    <th className="py-3 px-4 text-center">
                       <Skeleton className="h-4 w-20 mx-auto" />
                     </th>
-                    <th className="py-3 px-4 w-28">
+                    <th className="py-3 px-4 text-center w-28">
                       <Skeleton className="h-4 w-14 mx-auto" />
                     </th>
                   </tr>
@@ -58,13 +58,13 @@ export default function RankingPage() {
                 <tbody>
                   {Array.from({ length: 10 }).map((_, i) => (
                     <tr key={i} className="border-b border-white/5">
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-center">
                         <Skeleton className="h-4 w-10 mx-auto" />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-center">
                         <Skeleton className="h-4 w-24 mx-auto" />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-center">
                         <Skeleton className="h-4 w-16 mx-auto" />
                       </td>
                     </tr>
@@ -85,16 +85,16 @@ export default function RankingPage() {
           <>
             <div className="rounded-lg overflow-hidden border-2 border-chase-accent/30 bg-gray-900/50">
               <div className="overflow-x-auto">
-                <table className="w-full text-center">
+                <table className="w-full table-fixed">
                   <thead>
                     <tr className="border-b border-white/10 bg-chase-accent/10">
-                      <th className="py-3 px-4 text-xs font-semibold text-chase-muted uppercase tracking-wider w-20">
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-chase-muted uppercase tracking-wider w-24">
                         Rank
                       </th>
-                      <th className="py-3 px-4 text-xs font-semibold text-chase-muted uppercase tracking-wider">
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-chase-muted uppercase tracking-wider">
                         Address
                       </th>
-                      <th className="py-3 px-4 text-xs font-semibold text-chase-muted uppercase tracking-wider text-right w-28">
+                      <th className="py-3 px-4 text-center text-xs font-semibold text-chase-muted uppercase tracking-wider w-28">
                         Barks
                       </th>
                     </tr>
@@ -105,13 +105,13 @@ export default function RankingPage() {
                         key={row.solanaAddress}
                         className="border-b border-white/5 hover:bg-white/5 transition-colors"
                       >
-                        <td className="py-3 px-4 font-bold text-chase-accent tabular-nums">
+                        <td className="py-3 px-4 text-center font-bold text-chase-accent tabular-nums">
                           #{row.rank}
                         </td>
-                        <td className="py-3 px-4 text-chase-text font-mono text-sm">
+                        <td className="py-3 px-4 text-center text-chase-text font-mono text-sm">
                           {truncateAddress(row.solanaAddress)}
                         </td>
-                        <td className="py-3 px-4 text-chase-text tabular-nums font-medium">
+                        <td className="py-3 px-4 text-center text-chase-text tabular-nums font-medium">
                           {row.clickCount.toLocaleString()}
                         </td>
                       </tr>
