@@ -44,10 +44,14 @@ export default function RankingPage() {
 
   return (
     <main className="min-h-screen bg-chase-bg pt-20 md:pt-24 pb-12 px-4 sm:px-6 md:px-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
+        {/* Live on Fogo pill (Fogo-style) */}
+        <p className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider text-chase-accent border-2 border-chase-accent/50 bg-chase-accent/10 mb-6">
+          Live on Fogo Mainnet
+        </p>
         <div className="flex items-center justify-center gap-2 mb-6 md:mb-8">
           <Trophy className="w-8 h-8 text-chase-accent" />
-          <h1 className="text-3xl md:text-4xl font-black text-chase-text tracking-tight uppercase">
+          <h1 className="text-2xl md:text-3xl font-black text-chase-text tracking-tight uppercase">
             Global Ranking
           </h1>
         </div>
@@ -86,7 +90,7 @@ export default function RankingPage() {
         </p>
 
         {result === undefined ? (
-          <div className="rounded-lg overflow-hidden border-2 border-chase-accent/30 bg-gray-900/50">
+          <div className="rounded-xl overflow-hidden border-2 border-chase-accent/30 bg-gray-900/50">
             <div className="overflow-x-auto">
               <table className="w-full table-fixed">
                 <thead>
@@ -121,7 +125,7 @@ export default function RankingPage() {
             </div>
           </div>
         ) : result.entries.length === 0 ? (
-          <div className="rounded-lg bg-gray-900/50 border-2 border-chase-accent/30 p-8 text-center text-chase-muted">
+          <div className="rounded-xl bg-gray-900/50 border-2 border-chase-accent/30 p-8 text-center text-chase-muted">
             No rankings yet.{" "}
             <Link href="/" className="text-chase-accent hover:underline">
               Play Chase Dog
@@ -130,7 +134,7 @@ export default function RankingPage() {
           </div>
         ) : (
           <>
-            <div className="rounded-lg overflow-hidden border-2 border-chase-accent/30 bg-gray-900/50">
+            <div className="rounded-xl overflow-hidden border-2 border-chase-accent/30 bg-gray-900/50">
               <div className="overflow-x-auto">
                 <table className="w-full table-fixed">
                   <thead>
@@ -244,7 +248,7 @@ export default function RankingPage() {
           </>
         )}
 
-        <div className="mt-8 text-center">
+        <div className="mt-10 pt-8 border-t border-white/10 text-center">
           <Link
             href="/"
             className="text-chase-accent font-medium hover:underline"

@@ -10,10 +10,10 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Trophy, ChevronDown, ExternalLink } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 const BUY_CHASE_URL =
   "https://valiant.trade/token/GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz";
-import { useState, useRef, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function Navbar() {
