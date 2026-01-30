@@ -2,11 +2,7 @@
 
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { NATIVE_MINT } from "@solana/spl-token";
-import {
-  FogoSessionProvider,
-  SessionButton,
-  Network,
-} from "@fogo/sessions-sdk-react";
+import { FogoSessionProvider, Network } from "@fogo/sessions-sdk-react";
 import { Analytics } from "@vercel/analytics/next";
 import { ConvexFogoSync } from "@/components/convex-fogo-sync";
 
@@ -33,9 +29,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableUnlimited
       >
         <ConvexFogoSync />
-        <div className="fixed top-0 right-0 z-50 flex justify-end items-center p-4 md:p-6">
-          <SessionButton />
-        </div>
         {children}
         <Analytics />
       </FogoSessionProvider>

@@ -10,7 +10,9 @@ export const ensureUserRecord = mutation({
   handler: async (ctx, { solanaAddress }) => {
     const existing = await ctx.db
       .query("chaseUsers")
-      .withIndex("by_solana_address", (q) => q.eq("solanaAddress", solanaAddress))
+      .withIndex("by_solana_address", (q) =>
+        q.eq("solanaAddress", solanaAddress),
+      )
       .first();
 
     if (existing) {
@@ -32,7 +34,9 @@ export const incrementClickCount = mutation({
   handler: async (ctx, { solanaAddress }) => {
     const user = await ctx.db
       .query("chaseUsers")
-      .withIndex("by_solana_address", (q) => q.eq("solanaAddress", solanaAddress))
+      .withIndex("by_solana_address", (q) =>
+        q.eq("solanaAddress", solanaAddress),
+      )
       .first();
 
     if (!user) return null;
@@ -52,7 +56,50 @@ export const getBySolanaAddress = query({
   handler: async (ctx, { solanaAddress }) => {
     return await ctx.db
       .query("chaseUsers")
-      .withIndex("by_solana_address", (q) => q.eq("solanaAddress", solanaAddress))
+      .withIndex("by_solana_address", (q) =>
+        q.eq("solanaAddress", solanaAddress),
+      )
       .first();
+  },
+});
+
+/**
+ * Get the current user's rank by click count (1 = highest). Returns null if user not found.
+ */
+export const getUserRank = query({
+  args: { solanaAddress: v.string() },
+  handler: async (ctx, { solanaAddress }) => {
+    const all = await ctx.db.query("chaseUsers").collect();
+    all.sort((a, b) => b.clickCount - a.clickCount);
+    const index = all.findIndex((u) => u.solanaAddress === solanaAddress);
+    if (index === -1) return null;
+    const user = all[index];
+    return {
+      rank: index + 1,
+      totalUsers: all.length,
+      clickCount: user.clickCount,
+    };
+  },
+});
+
+const PAGE_SIZE = 100;
+
+/**
+ * Get one page of the global leaderboard (1-100, 101-200, etc.). Page is 1-based.
+ */
+export const getLeaderboardPage = query({
+  args: { page: v.number() },
+  handler: async (ctx, { page }) => {
+    const all = await ctx.db.query("chaseUsers").collect();
+    all.sort((a, b) => b.clickCount - a.clickCount);
+    const totalCount = all.length;
+    const start = (page - 1) * PAGE_SIZE;
+    const slice = all.slice(start, start + PAGE_SIZE);
+    const entries = slice.map((u, i) => ({
+      rank: start + i + 1,
+      solanaAddress: u.solanaAddress,
+      clickCount: u.clickCount,
+    }));
+    return { entries, totalCount, page, pageSize: PAGE_SIZE };
   },
 });
