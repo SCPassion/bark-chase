@@ -127,7 +127,7 @@ export default function RankingPage() {
         ) : result.entries.length === 0 ? (
           <div className="rounded-xl bg-gray-900/50 border-2 border-chase-accent/30 p-8 text-center text-chase-muted">
             No rankings yet.{" "}
-            <Link href="/" className="text-chase-accent hover:underline">
+            <Link href="/play" className="text-chase-accent hover:underline">
               Play Chase Dog
             </Link>{" "}
             to get on the board!
@@ -253,7 +253,14 @@ export default function RankingPage() {
             href="/"
             className="text-chase-accent font-medium hover:underline"
           >
-            ← Back to Chase Dog
+            ← Back to home
+          </Link>
+          <span className="text-chase-muted mx-2">|</span>
+          <Link
+            href="/play"
+            className="text-chase-accent font-medium hover:underline"
+          >
+            Play Chase Dog
           </Link>
         </div>
       </div>

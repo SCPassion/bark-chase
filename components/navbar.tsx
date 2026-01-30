@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   useSession,
@@ -12,17 +13,18 @@ import { api } from "@/convex/_generated/api";
 import { Trophy, ChevronDown, ExternalLink } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 const BUY_CHASE_URL =
   "https://valiant.trade/token/GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export function Navbar() {
   const pathname = usePathname();
   const sessionState = useSession();
   const isLoggedIn = isEstablished(sessionState);
   const isHome = pathname === "/";
+  const isPlay = pathname === "/play";
   const isRanking = pathname === "/ranking";
-  const isIntro = pathname === "/intro";
   const solanaAddress = isLoggedIn
     ? sessionState.walletPublicKey.toBase58()
     : null;
@@ -58,14 +60,14 @@ export function Navbar() {
           Chase Dog
         </Link>
         <Link
-          href="/intro"
+          href="/play"
           className={`text-sm md:text-base font-medium transition-colors ${
-            isIntro
+            isPlay
               ? "text-chase-accent"
               : "text-chase-muted hover:text-chase-accent"
           }`}
         >
-          What is this?
+          Play
         </Link>
         <Link
           href="/ranking"
@@ -83,7 +85,14 @@ export function Navbar() {
           rel="noopener noreferrer"
           className="text-sm md:text-base font-medium text-chase-muted hover:text-chase-accent transition-colors inline-flex items-center gap-1.5"
         >
-          Buy $CHASE
+          <Image
+            src="/valiant.jpg"
+            alt="ValiantTrade"
+            width={20}
+            height={20}
+            className="rounded object-contain shrink-0"
+          />
+          Buy $CHASE on Valiant
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
       </div>
