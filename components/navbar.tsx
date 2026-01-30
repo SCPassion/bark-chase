@@ -11,6 +11,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Trophy, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -83,7 +84,10 @@ export function Navbar() {
             {rankOpen && (
               <div className="absolute right-0 top-full mt-1 py-3 px-4 min-w-[200px] rounded-lg bg-gray-900 border-2 border-chase-accent shadow-2xl">
                 {rankData === undefined ? (
-                  <p className="text-sm text-white/70">Loading...</p>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
                 ) : rankData === null ? (
                   <p className="text-sm text-white/70">No rank yet</p>
                 ) : (

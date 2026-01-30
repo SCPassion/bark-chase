@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import Link from "next/link";
 import { Trophy, ChevronLeft, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const PAGE_SIZE = 100;
 
@@ -38,8 +39,39 @@ export default function RankingPage() {
         </p>
 
         {result === undefined ? (
-          <div className="rounded-lg bg-gray-900/50 border-2 border-chase-accent/30 p-8 text-center text-chase-muted">
-            Loading...
+          <div className="rounded-lg overflow-hidden border-2 border-chase-accent/30 bg-gray-900/50">
+            <div className="overflow-x-auto">
+              <table className="w-full text-center">
+                <thead>
+                  <tr className="border-b border-white/10 bg-chase-accent/10">
+                    <th className="py-3 px-4 w-20">
+                      <Skeleton className="h-4 w-12 mx-auto" />
+                    </th>
+                    <th className="py-3 px-4">
+                      <Skeleton className="h-4 w-20 mx-auto" />
+                    </th>
+                    <th className="py-3 px-4 w-28">
+                      <Skeleton className="h-4 w-14 mx-auto" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <tr key={i} className="border-b border-white/5">
+                      <td className="py-3 px-4">
+                        <Skeleton className="h-4 w-10 mx-auto" />
+                      </td>
+                      <td className="py-3 px-4">
+                        <Skeleton className="h-4 w-24 mx-auto" />
+                      </td>
+                      <td className="py-3 px-4">
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : result.entries.length === 0 ? (
           <div className="rounded-lg bg-gray-900/50 border-2 border-chase-accent/30 p-8 text-center text-chase-muted">
@@ -62,8 +94,8 @@ export default function RankingPage() {
                       <th className="py-3 px-4 text-xs font-semibold text-chase-muted uppercase tracking-wider">
                         Address
                       </th>
-                      <th className="py-3 px-4 text-xs font-semibold text-chase-muted uppercase tracking-wider w-28">
-                        $CHASE Burnt
+                      <th className="py-3 px-4 text-xs font-semibold text-chase-muted uppercase tracking-wider text-right w-28">
+                        Barks
                       </th>
                     </tr>
                   </thead>
