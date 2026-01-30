@@ -9,7 +9,10 @@ import {
 } from "@fogo/sessions-sdk-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Trophy, ChevronDown } from "lucide-react";
+import { Trophy, ChevronDown, ExternalLink } from "lucide-react";
+
+const BUY_CHASE_URL =
+  "https://valiant.trade/token/GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz";
 import { useState, useRef, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,6 +22,7 @@ export function Navbar() {
   const isLoggedIn = isEstablished(sessionState);
   const isHome = pathname === "/";
   const isRanking = pathname === "/ranking";
+  const isIntro = pathname === "/intro";
   const solanaAddress = isLoggedIn
     ? sessionState.walletPublicKey.toBase58()
     : null;
@@ -54,6 +58,16 @@ export function Navbar() {
           Chase Dog
         </Link>
         <Link
+          href="/intro"
+          className={`text-sm md:text-base font-medium transition-colors ${
+            isIntro
+              ? "text-chase-accent"
+              : "text-chase-muted hover:text-chase-accent"
+          }`}
+        >
+          What is this?
+        </Link>
+        <Link
           href="/ranking"
           className={`text-sm md:text-base font-medium transition-colors ${
             isRanking
@@ -63,6 +77,15 @@ export function Navbar() {
         >
           Global Ranking
         </Link>
+        <a
+          href={BUY_CHASE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm md:text-base font-medium text-chase-muted hover:text-chase-accent transition-colors inline-flex items-center gap-1.5"
+        >
+          Buy $CHASE
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
       </div>
 
       <div className="flex items-center gap-3 md:gap-4">
