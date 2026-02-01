@@ -15,7 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         network={Network.Mainnet}
         domain={
           process.env.NODE_ENV === "production"
-            ? undefined
+            ? "https://barkchase.scptech.xyz" // This is the domain of the actual website
             : "https://sessions-example.fogo.io"
         }
         tokens={[
