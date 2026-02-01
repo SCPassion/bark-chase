@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Play Chase Dog | Click to Burn $CHASE",
+  title: "Let Chase Dog Bark | Click to Burn $CHASE",
   description:
     "Click Chase to burn 1 $CHASE per tap. Popcat-style deflationary game on Fogo. Connect wallet and play.",
 };

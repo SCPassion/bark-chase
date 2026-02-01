@@ -48,13 +48,13 @@ export default function HomePage() {
               href="/play"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-chase-accent text-white font-bold text-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-chase-accent focus:ring-offset-2 focus:ring-offset-chase-bg transition-opacity shadow-[0_0_20px_rgba(242,101,34,0.4)] w-full sm:w-auto"
             >
-              Play Chase Dog
+              Play with Chase Dog now!
             </Link>
             <a
               href="#why-chase-dog"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full border-2 border-chase-accent/50 text-chase-accent font-semibold text-lg hover:bg-chase-accent/10 transition-colors w-full sm:w-auto"
             >
-              Learn More
+              Learn More!
             </a>
           </div>
         </div>
@@ -93,7 +93,7 @@ export default function HomePage() {
       >
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-black text-chase-text uppercase tracking-tight text-center mb-3">
-            Why Chase Dog?
+            Why let Chase Dog bark?
           </h2>
           <p className="text-chase-muted text-center max-w-2xl mx-auto mb-10">
             Built for fun, designed for the pack. Here&apos;s what makes Chase

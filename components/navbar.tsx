@@ -36,7 +36,7 @@ export function Navbar() {
 
   const rankData = useQuery(
     api.users.getUserRank,
-    solanaAddress ? { solanaAddress } : "skip",
+    solanaAddress ? { solanaAddress } : "skip"
   );
   const [rankOpen, setRankOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -126,7 +126,9 @@ export function Navbar() {
                 <Trophy className="w-4 h-4" />
                 <span>My Rank</span>
                 <ChevronDown
-                  className={`w-4 h-4 transition-transform ${rankOpen ? "rotate-180" : ""}`}
+                  className={`w-4 h-4 transition-transform ${
+                    rankOpen ? "rotate-180" : ""
+                  }`}
                 />
               </button>
               {rankOpen && (
@@ -205,21 +207,27 @@ export function Navbar() {
           <Link
             href="/"
             onClick={closeMobileMenu}
-            className={`px-4 py-3 rounded-lg font-medium transition-colors ${navLinkClass(isHome)}`}
+            className={`px-4 py-3 rounded-lg font-medium transition-colors ${navLinkClass(
+              isHome
+            )}`}
           >
             What is this?
           </Link>
           <Link
             href="/play"
             onClick={closeMobileMenu}
-            className={`px-4 py-3 rounded-lg font-medium transition-colors ${navLinkClass(isPlay)}`}
+            className={`px-4 py-3 rounded-lg font-medium transition-colors ${navLinkClass(
+              isPlay
+            )}`}
           >
             Play
           </Link>
           <Link
             href="/ranking"
             onClick={closeMobileMenu}
-            className={`px-4 py-3 rounded-lg font-medium transition-colors ${navLinkClass(isRanking)}`}
+            className={`px-4 py-3 rounded-lg font-medium transition-colors ${navLinkClass(
+              isRanking
+            )}`}
           >
             Global Ranking
           </Link>
