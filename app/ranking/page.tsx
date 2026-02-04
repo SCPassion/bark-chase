@@ -22,6 +22,16 @@ function truncateAddress(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
+/** Convert ISO 3166-1 alpha-2 country code to flag emoji (e.g. "US" → 🇺🇸). */
+function countryCodeToFlag(code: string) {
+  if (!code || code.length !== 2) return "";
+  return code
+    .toUpperCase()
+    .split("")
+    .map((c) => String.fromCodePoint(0x1f1e6 - 65 + c.charCodeAt(0)))
+    .join("");
+}
+
 export default function RankingPage() {
   const [mode, setMode] = useState<RankMode>("address");
   const [page, setPage] = useState(1);
@@ -177,7 +187,17 @@ export default function RankingPage() {
                               #{row.rank}
                             </td>
                             <td className="py-3 px-4 text-center text-chase-text">
-                              {row.countryName} ({row.countryCode})
+                              <span className="inline-flex items-center justify-center gap-2">
+                                <span
+                                  className="text-lg leading-none"
+                                  aria-hidden
+                                >
+                                  {countryCodeToFlag(row.countryCode)}
+                                </span>
+                                <span>
+                                  {row.countryName} ({row.countryCode})
+                                </span>
+                              </span>
                             </td>
                             <td className="py-3 px-4 text-center text-chase-text tabular-nums font-medium">
                               {row.clickCount.toLocaleString()}
@@ -236,7 +256,7 @@ export default function RankingPage() {
                       {(p - 1) * PAGE_SIZE + 1}–
                       {Math.min(p * PAGE_SIZE, result.totalCount)}
                     </button>
-                  ),
+                  )
                 )}
               </div>
             )}
