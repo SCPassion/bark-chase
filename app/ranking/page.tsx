@@ -36,8 +36,14 @@ export default function RankingPage() {
   const [mode, setMode] = useState<RankMode>("address");
   const [page, setPage] = useState(1);
 
-  const addressResult = useQuery(api.users.getLeaderboardPage, { page });
-  const countryResult = useQuery(api.users.getCountryLeaderboardPage, { page });
+  const addressResult = useQuery(
+    api.users.getLeaderboardPage,
+    mode === "address" ? { page } : "skip",
+  );
+  const countryResult = useQuery(
+    api.users.getCountryLeaderboardPage,
+    mode === "country" ? { page } : "skip",
+  );
 
   const result = mode === "address" ? addressResult : countryResult;
 

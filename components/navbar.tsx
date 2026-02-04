@@ -34,13 +34,14 @@ export function Navbar() {
     ? sessionState.walletPublicKey.toBase58()
     : null;
 
-  const rankData = useQuery(
-    api.users.getUserRank,
-    solanaAddress ? { solanaAddress } : "skip"
-  );
   const [rankOpen, setRankOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const rankRef = useRef<HTMLDivElement>(null);
+  const shouldFetchRank = isLoggedIn && (rankOpen || mobileMenuOpen);
+  const rankData = useQuery(
+    api.users.getUserRank,
+    shouldFetchRank && solanaAddress ? { solanaAddress } : "skip",
+  );
 
   // Close mobile menu on route change
   useEffect(() => {
