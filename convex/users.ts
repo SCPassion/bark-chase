@@ -52,7 +52,7 @@ export const incrementClickCount = mutation({
     });
 
     if (countryCode != null && countryCode !== "") {
-      let country = await ctx.db
+      const country = await ctx.db
         .query("countryClicks")
         .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
         .first();
@@ -60,14 +60,9 @@ export const incrementClickCount = mutation({
         await ctx.db.insert("countryClicks", {
           countryCode,
           countryName: countryName ?? countryCode,
-          clickCount: 0,
+          clickCount: 1,
         });
-        country = await ctx.db
-          .query("countryClicks")
-          .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
-          .first();
-      }
-      if (country) {
+      } else {
         await ctx.db.patch(country._id, {
           clickCount: country.clickCount + 1,
           ...(countryName != null && { countryName }),
