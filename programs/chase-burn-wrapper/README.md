@@ -159,6 +159,11 @@ Example returned sponsor:
 
 - `CnuMuQ3qH9YZ4rNe9bNxqVcPRnQs5Nt3aVhmYAEB8XtC`
 
+Security note:
+
+- Sponsor key is a public address and is safe to share.
+- Never share seed phrases, private keys, Ledger recovery phrases, or keypair JSON secret contents.
+
 ### 2. Fund sponsor key (explicit dev wallet signer)
 
 Use `-k ~/.config/solana/dev-wallet.json` so the transfer does not default to another local keypair.
