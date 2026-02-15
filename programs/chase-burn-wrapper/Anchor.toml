@@ -1,0 +1,19 @@
+[toolchain]
+anchor_version = "0.31.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.mainnet]
+chase_burn_wrapper = "3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "https://mainnet.fogo.io"
+wallet = "~/.config/solana/dev-wallet.json"
+
+[scripts]
+test = "anchor test"

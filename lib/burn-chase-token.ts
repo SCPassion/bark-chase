@@ -1,9 +1,67 @@
+import {
+  isEstablished,
+  type SessionState,
+  TransactionResultType,
+} from "@fogo/sessions-sdk-react";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import {
+  BURN_WRAPPER_PROGRAM_ID,
+  CHASE_MINT_PUBLIC_KEY,
+  TOKEN_PROGRAM_ID,
+} from "@/lib/chase-token";
+
+// Anchor discriminator for `global:burn_one_chase`.
+const BURN_ONE_CHASE_DISCRIMINATOR = Buffer.from("d51275cd2ab49e13", "hex");
+
 /**
- * Burns 1 $CHASE token for the given Solana address (e.g. via Fogo session).
- * Placeholder implementation; replace with actual burn transaction when ready.
+ * Sends the wrapper burn instruction through Fogo Sessions.
+ * Returns true only when the transaction is confirmed successful.
  */
-export async function burnOneChaseToken(_solanaAddress: string): Promise<boolean> {
-  // TODO: implement actual burn (e.g. Fogo session transaction)
-  await new Promise((r) => setTimeout(r, 0));
-  return true;
+export async function burnOneChaseToken(sessionState: SessionState): Promise<boolean> {
+  if (!isEstablished(sessionState)) return false;
+
+  if (!BURN_WRAPPER_PROGRAM_ID) {
+    console.warn(
+      "Burn wrapper program ID missing. Set NEXT_PUBLIC_BURN_WRAPPER_PROGRAM_ID.",
+    );
+    return false;
+  }
+
+  try {
+    const userAuthority = sessionState.walletPublicKey;
+    const tokenProgram = new PublicKey(TOKEN_PROGRAM_ID);
+    const burnWrapperProgram = new PublicKey(BURN_WRAPPER_PROGRAM_ID);
+    const userTokenAccount = getAssociatedTokenAddressSync(
+      CHASE_MINT_PUBLIC_KEY,
+      userAuthority,
+      false,
+      tokenProgram,
+    );
+
+    const instruction = new TransactionInstruction({
+      programId: burnWrapperProgram,
+      keys: [
+        { pubkey: userAuthority, isSigner: true, isWritable: true },
+        { pubkey: userTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: CHASE_MINT_PUBLIC_KEY, isSigner: false, isWritable: false },
+        { pubkey: tokenProgram, isSigner: false, isWritable: false },
+      ],
+      data: BURN_ONE_CHASE_DISCRIMINATOR,
+    });
+
+    const result = await sessionState.sendTransaction([instruction], {
+      variation: "BurnOneChase",
+    });
+
+    if (result.type === TransactionResultType.Success) {
+      return true;
+    }
+
+    console.warn("Burn transaction failed:", result.error);
+    return false;
+  } catch (error) {
+    console.warn("Burn transaction threw error:", error);
+    return false;
+  }
 }

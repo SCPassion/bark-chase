@@ -1,0 +1,8 @@
+[workspace]
+members = ["programs/chase_burn_wrapper"]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1

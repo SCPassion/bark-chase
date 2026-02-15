@@ -66,7 +66,7 @@ export function ChaseDog() {
       });
     }
 
-    const burnSuccess = await burnOneChaseToken(solanaAddress);
+    const burnSuccess = await burnOneChaseToken(sessionState);
     if (burnSuccess) {
       let country = countryRef.current;
       if (!country) {
@@ -81,7 +81,7 @@ export function ChaseDog() {
         }),
       });
     }
-  }, [isLoggedIn, solanaAddress, incrementClickCount]);
+  }, [isLoggedIn, solanaAddress, incrementClickCount, sessionState]);
 
   const handleInteractionEnd = useCallback(() => {
     setIsMouthOpen(false);
