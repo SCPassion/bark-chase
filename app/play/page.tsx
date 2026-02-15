@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ChaseDog } from "@/components/chase-dog";
 import { HelpCircle } from "lucide-react";

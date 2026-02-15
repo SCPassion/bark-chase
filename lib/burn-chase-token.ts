@@ -18,7 +18,9 @@ const BURN_ONE_CHASE_DISCRIMINATOR = Buffer.from("d51275cd2ab49e13", "hex");
  * Sends the wrapper burn instruction through Fogo Sessions.
  * Returns true only when the transaction is confirmed successful.
  */
-export async function burnOneChaseToken(sessionState: SessionState): Promise<boolean> {
+export async function burnOneChaseToken(
+  sessionState: SessionState,
+): Promise<boolean> {
   if (!isEstablished(sessionState)) return false;
 
   if (!BURN_WRAPPER_PROGRAM_ID) {
