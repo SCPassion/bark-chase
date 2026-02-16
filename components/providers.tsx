@@ -9,6 +9,7 @@ import { CHASE_MINT } from "@/lib/chase-token";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 const FUSD_MINT = "fUSDNGgHkZfwckbr5RLLvRbvqvRcTLdH9hcHJiq4jry";
+const DEFAULT_FOGO_SESSION_DOMAIN = "https://smilechase.scptech.xyz";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -16,9 +17,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <FogoSessionProvider
         network={Network.Mainnet}
         domain={
-          process.env.NODE_ENV === "production"
-            ? "https://smilechase.scptech.xyz" // This is the domain of the actual website
-            : "https://sessions-example.fogo.io"
+          process.env.NEXT_PUBLIC_FOGO_SESSION_DOMAIN ??
+          DEFAULT_FOGO_SESSION_DOMAIN
         }
         tokens={[
           NATIVE_MINT.toBase58(),
