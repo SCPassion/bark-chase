@@ -1,0 +1,25 @@
+[[domains]]
+domain = "https://smilechase.scptech.xyz"
+enable_session_management = true
+enable_preflight_simulation = true
+
+[[domains.tx_variations]]
+version = "v1"
+name = "BurnOneChase"
+max_gas_spend = 500000
+
+# Optional compute-budget instructions your client may include.
+[[domains.tx_variations.instructions]]
+program = "ComputeBudget111111111111111111111111111111"
+required = false
+
+# Required wrapper instruction called by frontend.
+[[domains.tx_variations.instructions]]
+program = "3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx"
+required = true
+
+# user_authority signer (account index 0 in wrapper ix)
+[[domains.tx_variations.instructions.accounts]]
+index = 0
+include = [{ NonFeePayerSigner = {} }]
+exclude = []

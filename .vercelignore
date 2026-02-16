@@ -1,0 +1,10 @@
+programs/
+target/
+tests/
+.anchor/
+.cargo/
+node_modules/
+.pnpm-store/
+.env.local
+.env*.local
+*.log

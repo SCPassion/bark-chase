@@ -5,13 +5,38 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://smilechase.scptech.xyz"),
   title: "Chase Dog | $CHASE Burn Game on Fogo",
   description:
     "$CHASE is a community-driven memecoin on Fogo. Burn 1 $CHASE per click — deflationary fun, no insiders, 100% airdropped. Trade on ValiantTrade, chart on Birdeye.",
+  openGraph: {
+    title: "Chase Dog | $CHASE Burn Game on Fogo",
+    description:
+      "$CHASE is a community-driven memecoin on Fogo. Burn 1 $CHASE per click — deflationary fun, no insiders, 100% airdropped.",
+    type: "website",
+    siteName: "Chase Dog",
+    images: [{ url: "/Dog.jpg", width: 1200, height: 1200, alt: "Chase Dog" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Chase Dog | $CHASE Burn Game on Fogo",
+    description:
+      "$CHASE is a community-driven memecoin on Fogo. Burn 1 $CHASE per click.",
+    images: ["/Dog.jpg"],
+  },
 };
 
 export default function RootLayout({
@@ -21,7 +46,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
+      <body
+        className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}
+      >
         <Providers>
           <Navbar />
           {children}
