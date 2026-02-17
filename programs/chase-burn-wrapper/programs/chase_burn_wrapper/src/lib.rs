@@ -54,6 +54,7 @@ pub struct BurnOneChase<'info> {
     )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
 
+    #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
     pub token_program: Interface<'info, TokenInterface>,
 }

@@ -48,7 +48,7 @@ export async function burnOneChaseToken(
         { pubkey: sessionAuthority, isSigner: true, isWritable: true },
         { pubkey: walletOwner, isSigner: false, isWritable: false },
         { pubkey: userTokenAccount, isSigner: false, isWritable: true },
-        { pubkey: CHASE_MINT_PUBLIC_KEY, isSigner: false, isWritable: false },
+        { pubkey: CHASE_MINT_PUBLIC_KEY, isSigner: false, isWritable: true },
         { pubkey: tokenProgram, isSigner: false, isWritable: false },
       ],
       data: BURN_ONE_CHASE_DISCRIMINATOR,
@@ -62,7 +62,11 @@ export async function burnOneChaseToken(
       return true;
     }
 
-    console.warn("Burn transaction failed:", result.error);
+    console.warn("Burn transaction failed:", {
+      signature: result.signature,
+      error: result.error,
+      serializedError: JSON.stringify(result.error),
+    });
     return false;
   } catch (error) {
     console.warn("Burn transaction threw error:", error);
