@@ -35,11 +35,15 @@ async function resolveBurnSourceAccount(
 
   const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
     walletOwner,
-    { mint: CHASE_MINT_PUBLIC_KEY },
+    { programId: tokenProgram },
     "confirmed",
   );
 
-  const first = tokenAccounts.value[0]?.pubkey;
+  const first = tokenAccounts.value.find((entry) => {
+    const parsed = entry.account.data.parsed;
+    if (!parsed || parsed.type !== "account") return false;
+    return parsed.info?.mint === CHASE_MINT_PUBLIC_KEY.toBase58();
+  })?.pubkey;
   return first ?? ata;
 }
 
@@ -64,10 +68,32 @@ export async function burnOneChaseToken(
     const sessionAuthority = sessionState.sessionPublicKey;
     const tokenProgram = new PublicKey(TOKEN_PROGRAM_ID);
     const burnWrapperProgram = new PublicKey(BURN_WRAPPER_PROGRAM_ID);
+    const connection = new Connection(
+      process.env.NEXT_PUBLIC_FOGO_RPC_URL ?? DEFAULT_FOGO_RPC,
+      "confirmed",
+    );
     const userTokenAccount = await resolveBurnSourceAccount(
       walletOwner,
       tokenProgram,
     );
+    const tokenAccountInfo = await connection.getParsedAccountInfo(
+      userTokenAccount,
+      "confirmed",
+    );
+    const parsed = tokenAccountInfo.value?.data;
+    if (
+      !parsed ||
+      !("parsed" in parsed) ||
+      parsed.parsed?.type !== "account" ||
+      parsed.parsed?.info?.mint !== CHASE_MINT_PUBLIC_KEY.toBase58()
+    ) {
+      console.warn("Invalid CHASE source token account selected.", {
+        walletOwner: walletOwner.toBase58(),
+        userTokenAccount: userTokenAccount.toBase58(),
+        tokenProgram: tokenProgram.toBase58(),
+      });
+      return false;
+    }
 
     const instruction = new TransactionInstruction({
       programId: burnWrapperProgram,
