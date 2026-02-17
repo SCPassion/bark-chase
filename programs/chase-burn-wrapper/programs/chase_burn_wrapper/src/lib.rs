@@ -7,7 +7,7 @@ declare_id!("7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA");
 
 const CHASE_MINT: Pubkey = pubkey!("GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz");
 const CHASE_DECIMALS: u8 = 9;
-const CHASE_UI_AMOUNT_TO_BURN: u64 = 1;
+const CHASE_BASE_UNITS_TO_BURN: u64 = 1_000_000_000;
 
 #[program]
 pub mod chase_burn_wrapper {
@@ -21,11 +21,6 @@ pub mod chase_burn_wrapper {
             ErrorCode::InvalidTokenOwner
         );
 
-        // Burn exactly 1 whole token (1 * 10^9 base units for $CHASE).
-        let amount = CHASE_UI_AMOUNT_TO_BURN
-            .checked_mul(10u64.pow(CHASE_DECIMALS as u32))
-            .ok_or(error!(ErrorCode::AmountOverflow))?;
-
         let cpi_accounts = BurnChecked {
             mint: ctx.accounts.mint.to_account_info(),
             from: ctx.accounts.user_token_account.to_account_info(),
@@ -34,7 +29,7 @@ pub mod chase_burn_wrapper {
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-        burn_checked(cpi_ctx, amount, CHASE_DECIMALS)?;
+        burn_checked(cpi_ctx, CHASE_BASE_UNITS_TO_BURN, CHASE_DECIMALS)?;
         Ok(())
     }
 }
@@ -65,6 +60,4 @@ pub enum ErrorCode {
     InvalidMint,
     #[msg("Token account owner does not match the provided wallet owner.")]
     InvalidTokenOwner,
-    #[msg("Overflow computing burn amount.")]
-    AmountOverflow,
 }
