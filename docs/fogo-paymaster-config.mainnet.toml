@@ -8,17 +8,17 @@ version = "v1"
 name = "BurnOneChase"
 max_gas_spend = 500000
 
-# Optional compute-budget instructions your client may include.
+# Optional compute budget instruction if client includes it.
 [[domains.tx_variations.instructions]]
 program = "ComputeBudget111111111111111111111111111111"
 required = false
 
-# Required wrapper instruction called by frontend.
+# Required wrapper program instruction.
 [[domains.tx_variations.instructions]]
 program = "7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA"
 required = true
 
-# session_authority signer (account index 0 in wrapper ix)
+# session_authority signer (account index 0 in wrapper instruction)
 [[domains.tx_variations.instructions.accounts]]
 index = 0
 include = [{ NonFeePayerSigner = {} }]

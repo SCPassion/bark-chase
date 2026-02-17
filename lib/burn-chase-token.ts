@@ -31,12 +31,13 @@ export async function burnOneChaseToken(
   }
 
   try {
-    const userAuthority = sessionState.walletPublicKey;
+    const walletOwner = sessionState.walletPublicKey;
+    const sessionAuthority = sessionState.sessionPublicKey;
     const tokenProgram = new PublicKey(TOKEN_PROGRAM_ID);
     const burnWrapperProgram = new PublicKey(BURN_WRAPPER_PROGRAM_ID);
     const userTokenAccount = getAssociatedTokenAddressSync(
       CHASE_MINT_PUBLIC_KEY,
-      userAuthority,
+      walletOwner,
       false,
       tokenProgram,
     );
@@ -44,7 +45,8 @@ export async function burnOneChaseToken(
     const instruction = new TransactionInstruction({
       programId: burnWrapperProgram,
       keys: [
-        { pubkey: userAuthority, isSigner: true, isWritable: true },
+        { pubkey: sessionAuthority, isSigner: true, isWritable: true },
+        { pubkey: walletOwner, isSigner: false, isWritable: false },
         { pubkey: userTokenAccount, isSigner: false, isWritable: true },
         { pubkey: CHASE_MINT_PUBLIC_KEY, isSigner: false, isWritable: false },
         { pubkey: tokenProgram, isSigner: false, isWritable: false },

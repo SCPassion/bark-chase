@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.mainnet]
-chase_burn_wrapper = "3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx"
+chase_burn_wrapper = "7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA"
 
 [registry]
 url = "https://api.apr.dev"
