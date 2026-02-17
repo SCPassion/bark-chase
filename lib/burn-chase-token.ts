@@ -4,7 +4,7 @@ import {
   TransactionResultType,
 } from "@fogo/sessions-sdk-react";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import {
   BURN_WRAPPER_PROGRAM_ID,
   CHASE_MINT_PUBLIC_KEY,
@@ -13,6 +13,35 @@ import {
 
 // Anchor discriminator for `global:burn_one_chase`.
 const BURN_ONE_CHASE_DISCRIMINATOR = Buffer.from("d51275cd2ab49e13", "hex");
+const DEFAULT_FOGO_RPC = "https://mainnet.fogo.io";
+
+async function resolveBurnSourceAccount(
+  walletOwner: PublicKey,
+  tokenProgram: PublicKey,
+): Promise<PublicKey> {
+  const ata = getAssociatedTokenAddressSync(
+    CHASE_MINT_PUBLIC_KEY,
+    walletOwner,
+    false,
+    tokenProgram,
+  );
+  const connection = new Connection(
+    process.env.NEXT_PUBLIC_FOGO_RPC_URL ?? DEFAULT_FOGO_RPC,
+    "confirmed",
+  );
+
+  const ataInfo = await connection.getAccountInfo(ata, "confirmed");
+  if (ataInfo) return ata;
+
+  const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+    walletOwner,
+    { mint: CHASE_MINT_PUBLIC_KEY },
+    "confirmed",
+  );
+
+  const first = tokenAccounts.value[0]?.pubkey;
+  return first ?? ata;
+}
 
 /**
  * Sends the wrapper burn instruction through Fogo Sessions.
@@ -35,10 +64,8 @@ export async function burnOneChaseToken(
     const sessionAuthority = sessionState.sessionPublicKey;
     const tokenProgram = new PublicKey(TOKEN_PROGRAM_ID);
     const burnWrapperProgram = new PublicKey(BURN_WRAPPER_PROGRAM_ID);
-    const userTokenAccount = getAssociatedTokenAddressSync(
-      CHASE_MINT_PUBLIC_KEY,
+    const userTokenAccount = await resolveBurnSourceAccount(
       walletOwner,
-      false,
       tokenProgram,
     );
 
