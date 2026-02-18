@@ -13,6 +13,7 @@ import {
 
 // Anchor discriminator for `global:burn_one_chase`.
 const BURN_ONE_CHASE_DISCRIMINATOR = Buffer.from("d51275cd2ab49e13", "hex");
+const PROGRAM_SIGNER_SEED = "fogo_session_program_signer";
 const DEFAULT_FOGO_RPC = "https://mainnet.fogo.io";
 
 async function resolveBurnSourceAccount(
@@ -68,6 +69,10 @@ export async function burnOneChaseToken(
     const sessionAuthority = sessionState.sessionPublicKey;
     const tokenProgram = new PublicKey(TOKEN_PROGRAM_ID);
     const burnWrapperProgram = new PublicKey(BURN_WRAPPER_PROGRAM_ID);
+    const [programSignerPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from(PROGRAM_SIGNER_SEED)],
+      burnWrapperProgram,
+    );
     const connection = new Connection(
       process.env.NEXT_PUBLIC_FOGO_RPC_URL ?? DEFAULT_FOGO_RPC,
       "confirmed",
@@ -98,8 +103,8 @@ export async function burnOneChaseToken(
     const instruction = new TransactionInstruction({
       programId: burnWrapperProgram,
       keys: [
-        { pubkey: sessionAuthority, isSigner: true, isWritable: true },
-        { pubkey: walletOwner, isSigner: false, isWritable: false },
+        { pubkey: sessionAuthority, isSigner: true, isWritable: false },
+        { pubkey: programSignerPda, isSigner: false, isWritable: false },
         { pubkey: userTokenAccount, isSigner: false, isWritable: true },
         { pubkey: CHASE_MINT_PUBLIC_KEY, isSigner: false, isWritable: true },
         { pubkey: tokenProgram, isSigner: false, isWritable: false },

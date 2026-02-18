@@ -22,3 +22,4 @@ default = []
 [dependencies]
 anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
+fogo-sessions-sdk = { version = "0.7.5", features = ["anchor", "token-program"] }
