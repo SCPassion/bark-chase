@@ -18,8 +18,9 @@ required = false
 program = "7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA"
 required = true
 
-# session_authority signer (account index 0 in wrapper ix)
-[[domains.tx_variations.instructions.accounts]]
-index = 0
-include = [{ NonFeePayerSigner = {} }]
-exclude = []
+# Optional safety check: anchor discriminator for `global:burn_one_chase`.
+# 8 bytes at start of instruction data:
+# d51275cd2ab49e13
+[[domains.tx_variations.instructions.data]]
+start_byte = 0
+constraint = { EqualTo = [{ Bytes = "d51275cd2ab49e13" }] }

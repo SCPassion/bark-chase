@@ -104,6 +104,8 @@ NEXT_PUBLIC_CHASE_MINT=GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz
 NEXT_PUBLIC_TOKEN_PROGRAM_ID=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
 NEXT_PUBLIC_CHASE_DECIMALS=9
 NEXT_PUBLIC_BURN_WRAPPER_PROGRAM_ID=<YOUR_DEPLOYED_PROGRAM_ID>
+NEXT_PUBLIC_FOGO_SESSION_DOMAIN=https://smilechase.scptech.xyz
+NEXT_PUBLIC_FOGO_RPC_URL=https://mainnet.fogo.io
 ```
 
 Then update app burn logic in:
@@ -131,14 +133,40 @@ Test cases:
    - user sees session/signing error
    - no click increment
 
-## 10. Common mistakes
+## 10. Paymaster setup (current workflow)
+
+Use the paymaster admin panel (not the old manual TOML submission flow):
+
+- `https://admin.dourolabs-paymaster.xyz/`
+
+For domain `https://smilechase.scptech.xyz`, configure variation:
+
+- `version`: `v1`
+- `name`: `BurnOneChase`
+- `max_gas_spend`: `500000`
+- required instruction program: your wrapper program id
+- optional instruction before it: compute budget program
+
+Optional hardening constraint:
+
+- data constraint on wrapper instruction:
+  - `start_byte = 0`
+  - `EqualTo -> Bytes -> d51275cd2ab49e13` (`global:burn_one_chase` discriminator)
+
+Important:
+
+- if you use account include constraints, new syntax is `include = ["NonFeePayerSigner"]` (old object syntax is deprecated)
+- config changes may take up to ~10 seconds to propagate
+- after variation/registry updates, revoke and recreate session before retesting
+
+## 11. Common mistakes
 
 1. Wrong RPC endpoint in `Anchor.toml`.
 2. Program ID mismatch between `declare_id!` and deployed address.
 3. Forgetting decimals (`burn_checked` must use `9`).
 4. Incrementing leaderboard even when transaction failed.
 
-## 11. Next implementation task in this repo
+## 12. Next implementation task in this repo
 
 After deployment, implement the client-side wrapper instruction call in:
 

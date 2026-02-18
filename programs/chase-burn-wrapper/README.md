@@ -89,57 +89,13 @@ anchor build
 - Keep `target/deploy/chase_burn_wrapper-keypair.json` secure; it defines the deployed program address.
 - After authority transfer, all future upgrades require the Ledger signer.
 
-## Executed deployment and authority transfer (mainnet)
+## Current mainnet deployment
 
-This is the exact flow used for this deployment.
+Current active wrapper program:
 
-### Program details
-
-- Program ID: `3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx`
+- Program ID: `7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA`
 - Fogo RPC: `https://mainnet.fogo.io`
-- Dev deployer wallet: `~/.config/solana/dev-wallet.json`
-- Ledger authority wallet: `FQ8HMp2gFxfSHzqLeHiyCHXXPK1osdxiyyCq1hDHWiHS`
-
-### 1. Build and deploy with dev wallet
-
-```bash
-cd /Users/scp/Documents/dev/bark-chase/programs/chase-burn-wrapper
-anchor build
-anchor deploy \
-  --provider.cluster https://mainnet.fogo.io \
-  --provider.wallet ~/.config/solana/dev-wallet.json
-```
-
-### 2. Verify deployed program
-
-```bash
-solana program show 3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx --url https://mainnet.fogo.io
-```
-
-### 3. Transfer upgrade authority to Ledger (skip new-authority signer check)
-
-```bash
-solana program set-upgrade-authority 3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx \
-  --new-upgrade-authority FQ8HMp2gFxfSHzqLeHiyCHXXPK1osdxiyyCq1hDHWiHS \
-  --skip-new-upgrade-authority-signer-check \
-  --keypair ~/.config/solana/dev-wallet.json \
-  --url https://mainnet.fogo.io
-```
-
-Why `--skip-new-upgrade-authority-signer-check` was required:
-
-- By default, Solana CLI expects the new authority to also sign this transaction.
-- A Ledger pubkey was provided directly (not as an online signer URI), so the command needs this flag.
-
-### 4. Verify final authority
-
-```bash
-solana program show 3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx --url https://mainnet.fogo.io
-```
-
-Expected authority:
-
-- `Authority: FQ8HMp2gFxfSHzqLeHiyCHXXPK1osdxiyyCq1hDHWiHS`
+- Deployer wallet path used in this repo: `~/.config/solana/dev-wallet.json`
 
 ## Fogo paymaster and app integration steps
 
@@ -185,27 +141,52 @@ Note:
 
 - Solana CLI labels native units as `SOL` even on Fogo RPC; treat that as FOGO on `https://mainnet.fogo.io`.
 
-### 3. Submit paymaster variation config to Fogo team
+### 3. Configure variation in paymaster admin
 
-Send:
+Use the paymaster admin panel:
+
+- `https://admin.dourolabs-paymaster.xyz/`
+
+Configure this variation for `https://smilechase.scptech.xyz` on mainnet:
+
+- `version`: `v1`
+- `name`: `BurnOneChase`
+- `max_gas_spend`: `500000`
+- domain settings:
+  - `Enable Session Management`: `true`
+  - `Enable Preflight Simulation`: `true`
+- instructions in order:
+  1. optional `ComputeBudget111111111111111111111111111111`
+  2. required `7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA`
+
+Optional hardening:
+
+- add instruction data constraint for anchor discriminator:
+  - `start_byte = 0`
+  - `EqualTo -> Bytes -> d51275cd2ab49e13`
+
+Reference templates in repo:
 
 - `/Users/scp/Documents/dev/bark-chase/docs/paymaster-config.example.toml`
+- `/Users/scp/Documents/dev/bark-chase/docs/fogo-paymaster-config.mainnet.toml`
 
-It already includes:
+Notes:
 
-- domain `https://smilechase.scptech.xyz`
-- variation name `BurnOneChase`
-- wrapper program `3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx`
+- new paymaster syntax for signer include is `include = ["NonFeePayerSigner"]` (old object syntax is deprecated)
+- config updates can take up to ~10 seconds to propagate
+- if Fogo adds new on-chain registry requirements (e.g. whitelisting), session reset may be needed after they apply changes
 
 ### 4. Configure app env
 
 In `/Users/scp/Documents/dev/bark-chase/.env.local`:
 
 ```bash
-NEXT_PUBLIC_BURN_WRAPPER_PROGRAM_ID=3wEtTtvH9xU3siLYULSEsU2SqaV4fWpaKUmppVi9M7yx
+NEXT_PUBLIC_BURN_WRAPPER_PROGRAM_ID=7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA
 NEXT_PUBLIC_CHASE_MINT=GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz
 NEXT_PUBLIC_TOKEN_PROGRAM_ID=TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
 NEXT_PUBLIC_CHASE_DECIMALS=9
+NEXT_PUBLIC_FOGO_SESSION_DOMAIN=https://smilechase.scptech.xyz
+NEXT_PUBLIC_FOGO_RPC_URL=https://mainnet.fogo.io
 ```
 
 ### 5. Run and verify end-to-end

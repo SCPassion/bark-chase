@@ -11,7 +11,7 @@ Popcat-style web game on Fogo where each click is intended to burn `1 $CHASE` an
 
 ## Current burn status
 
-The app currently contains a placeholder burn implementation in:
+The app currently sends a real wrapper burn transaction via Fogo Sessions in:
 
 - `lib/burn-chase-token.ts`
 
@@ -21,7 +21,7 @@ Confirmed chain constants for `$CHASE` integration:
 - Token Program: `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
 - Decimals: `9`
 
-Planned production flow is to call a wrapper program (via Fogo Sessions) that CPIs into token `burn_checked`.
+Current production flow calls wrapper program `7VVgbnE7HvncrfrnCg5jUxWNiVuSqspdX2SdUhGySUaA` (via Fogo Sessions), which CPIs into token `burn_checked`.
 
 ## Tech stack
 
@@ -96,7 +96,6 @@ pnpm dev:all
 
 ## Notes
 
-- Marketing text says burns are on-chain, but burn execution is still a placeholder until wrapper tx integration is completed.
 - Audio click sound source: https://mixkit.co/free-sound-effects/click/
 
 ## SVM/Anchor development guide
