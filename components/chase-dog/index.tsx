@@ -29,10 +29,23 @@ export function ChaseDog() {
     solanaAddress ? { solanaAddress } : "skip",
   );
   const incrementClickCount = useMutation(api.users.incrementClickCount);
+  const [localUnseenIncrements, setLocalUnseenIncrements] = useState(0);
+  const lastServerCountRef = useRef(0);
 
   const clickCount = userRecord?.clickCount ?? 0;
+  const displayCount = clickCount + localUnseenIncrements;
   const isConvexLoading = isLoggedIn && userRecord === undefined;
   const isCountLoading = isInitialLoad || isConvexLoading;
+
+  // Reconcile optimistic local increments when server count catches up.
+  useEffect(() => {
+    const previousServerCount = lastServerCountRef.current;
+    if (clickCount > previousServerCount) {
+      const acknowledged = clickCount - previousServerCount;
+      setLocalUnseenIncrements((current) => Math.max(0, current - acknowledged));
+    }
+    lastServerCountRef.current = clickCount;
+  }, [clickCount]);
 
   // Clear initial load blur after first paint / short delay
   useEffect(() => {
@@ -53,6 +66,24 @@ export function ChaseDog() {
     };
   }, []);
 
+  // Warm country cache in background so the first successful click does not wait on IP lookup.
+  useEffect(() => {
+    if (!isLoggedIn || countryRef.current) return;
+    let cancelled = false;
+    getCountryFromIp()
+      .then((country) => {
+        if (!cancelled && country) {
+          countryRef.current = country;
+        }
+      })
+      .catch(() => {
+        // Ignore country lookup failures; click flow must stay fast.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
+
   const handleInteractionStart = useCallback(async () => {
     if (!isLoggedIn || !solanaAddress) return;
 
@@ -68,18 +99,27 @@ export function ChaseDog() {
 
     const burnSuccess = await burnOneChaseToken(sessionState);
     if (burnSuccess) {
-      let country = countryRef.current;
+      // Update UI immediately; reconcile with Convex query once server catches up.
+      setLocalUnseenIncrements((current) => current + 1);
+      const country = countryRef.current;
       if (!country) {
-        country = await getCountryFromIp();
-        if (country) countryRef.current = country;
+        void getCountryFromIp().then((resolved) => {
+          if (resolved) countryRef.current = resolved;
+        });
       }
-      await incrementClickCount({
-        solanaAddress,
-        ...(country && {
-          countryCode: country.countryCode,
-          countryName: country.countryName,
-        }),
-      });
+      try {
+        await incrementClickCount({
+          solanaAddress,
+          ...(country && {
+            countryCode: country.countryCode,
+            countryName: country.countryName,
+          }),
+        });
+      } catch (error) {
+        // Roll back optimistic increment if DB write fails.
+        setLocalUnseenIncrements((current) => Math.max(0, current - 1));
+        console.warn("Failed to persist click count increment:", error);
+      }
     }
   }, [isLoggedIn, solanaAddress, incrementClickCount, sessionState]);
 
@@ -104,7 +144,7 @@ export function ChaseDog() {
       </ClickableArea>
 
       {isLoggedIn && (
-        <BarkCounter count={clickCount} isLoading={isCountLoading} />
+        <BarkCounter count={displayCount} isLoading={isCountLoading} />
       )}
     </div>
   );

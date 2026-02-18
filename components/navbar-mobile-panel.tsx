@@ -34,6 +34,8 @@ interface NavbarMobilePanelProps {
   isLoggedIn: boolean;
   solanaAddress: string | null;
   buyChaseUrl: string;
+  chaseBalanceUi: string;
+  isBalanceLoading: boolean;
 }
 
 const navLinkClass = (active: boolean) =>
@@ -49,6 +51,8 @@ export function NavbarMobilePanel({
   isLoggedIn,
   solanaAddress,
   buyChaseUrl,
+  chaseBalanceUi,
+  isBalanceLoading,
 }: NavbarMobilePanelProps) {
   return (
     <>
@@ -77,6 +81,14 @@ export function NavbarMobilePanel({
           <div className="pb-4 mb-4 border-b border-white/10">
             <SessionButton />
           </div>
+          {isLoggedIn && (
+            <div className="mx-2 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <span className="text-sm font-medium text-chase-muted">$CHASE</span>
+              <span className="text-2xl font-black leading-none tabular-nums text-chase-accent">
+                {isBalanceLoading ? "..." : chaseBalanceUi}
+              </span>
+            </div>
+          )}
           <Link href="/" onClick={closeMobileMenu} className={navLinkClass(isHome)}>
             What is this?
           </Link>

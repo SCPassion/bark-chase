@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
-import { useSession, isEstablished } from "@fogo/sessions-sdk-react";
+import {
+  useConnection,
+  useSession,
+  isEstablished,
+} from "@fogo/sessions-sdk-react";
 import { Trophy, ChevronDown, ExternalLink, Menu } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { CHASE_DECIMALS, CHASE_MINT_PUBLIC_KEY } from "@/lib/chase-token";
 
 const BUY_CHASE_URL =
   "https://valiant.trade/token/GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz";
@@ -55,6 +60,7 @@ const navLinkClass = (active: boolean) =>
 
 export function Navbar() {
   const pathname = usePathname();
+  const connection = useConnection();
   const sessionState = useSession();
   const isLoggedIn = isEstablished(sessionState);
   const isHome = pathname === "/";
@@ -66,7 +72,65 @@ export function Navbar() {
 
   const [rankOpen, setRankOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [chaseBalanceUi, setChaseBalanceUi] = useState("0");
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const rankRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setChaseBalanceUi("0");
+      setIsBalanceLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const formatBalance = (rawAmount: bigint) => {
+      const divisor = BigInt(10 ** CHASE_DECIMALS);
+      const whole = rawAmount / divisor;
+      const fractional = rawAmount % divisor;
+      const fractionalStr = fractional
+        .toString()
+        .padStart(CHASE_DECIMALS, "0")
+        .slice(0, 2);
+      return `${whole.toString()}.${fractionalStr}`;
+    };
+
+    const refresh = async () => {
+      if (!isEstablished(sessionState)) return;
+      setIsBalanceLoading(true);
+      try {
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+          sessionState.walletPublicKey,
+          { mint: CHASE_MINT_PUBLIC_KEY },
+          "confirmed",
+        );
+        const totalRaw = tokenAccounts.value.reduce((sum, account) => {
+          const amount =
+            account.account.data.parsed.info.tokenAmount.amount ?? "0";
+          return sum + BigInt(amount);
+        }, BigInt(0));
+        if (!cancelled) setChaseBalanceUi(formatBalance(totalRaw));
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("Failed to fetch CHASE balance:", error);
+          setChaseBalanceUi("0");
+        }
+      } finally {
+        if (!cancelled) setIsBalanceLoading(false);
+      }
+    };
+
+    void refresh();
+    const intervalId = setInterval(() => {
+      void refresh();
+    }, 12_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [connection, isLoggedIn, sessionState]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -141,6 +205,16 @@ export function Navbar() {
 
         <div className="flex items-center gap-3 md:gap-4">
           {isLoggedIn && (
+            <div className="hidden md:flex h-10 items-center rounded-xl border border-white/10 bg-black/30 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <span className="mr-1.5 text-sm font-medium text-chase-muted">
+                $CHASE
+              </span>
+              <span className="text-2xl font-black leading-none tabular-nums text-chase-accent">
+                {isBalanceLoading ? "..." : chaseBalanceUi}
+              </span>
+            </div>
+          )}
+          {isLoggedIn && (
             <div className="relative hidden md:block" ref={rankRef}>
               <button
                 type="button"
@@ -192,6 +266,8 @@ export function Navbar() {
           isLoggedIn={isLoggedIn}
           solanaAddress={solanaAddress}
           buyChaseUrl={BUY_CHASE_URL}
+          chaseBalanceUi={chaseBalanceUi}
+          isBalanceLoading={isBalanceLoading}
         />
       )}
     </>

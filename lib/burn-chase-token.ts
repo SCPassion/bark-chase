@@ -15,29 +15,42 @@ import {
 const BURN_ONE_CHASE_DISCRIMINATOR = Buffer.from("d51275cd2ab49e13", "hex");
 const PROGRAM_SIGNER_SEED = "fogo_session_program_signer";
 const DEFAULT_FOGO_RPC = "https://mainnet.fogo.io";
+const COMMITMENT: "confirmed" = "confirmed";
+const connection = new Connection(
+  process.env.NEXT_PUBLIC_FOGO_RPC_URL ?? DEFAULT_FOGO_RPC,
+  COMMITMENT,
+);
+const burnSourceAccountCache = new Map<string, PublicKey>();
+
+function getBurnSourceCacheKey(walletOwner: PublicKey, tokenProgram: PublicKey) {
+  return `${walletOwner.toBase58()}:${tokenProgram.toBase58()}`;
+}
 
 async function resolveBurnSourceAccount(
   walletOwner: PublicKey,
   tokenProgram: PublicKey,
 ): Promise<PublicKey> {
+  const cacheKey = getBurnSourceCacheKey(walletOwner, tokenProgram);
+  const cached = burnSourceAccountCache.get(cacheKey);
+  if (cached) return cached;
+
   const ata = getAssociatedTokenAddressSync(
     CHASE_MINT_PUBLIC_KEY,
     walletOwner,
     false,
     tokenProgram,
   );
-  const connection = new Connection(
-    process.env.NEXT_PUBLIC_FOGO_RPC_URL ?? DEFAULT_FOGO_RPC,
-    "confirmed",
-  );
 
-  const ataInfo = await connection.getAccountInfo(ata, "confirmed");
-  if (ataInfo) return ata;
+  const ataInfo = await connection.getAccountInfo(ata, COMMITMENT);
+  if (ataInfo) {
+    burnSourceAccountCache.set(cacheKey, ata);
+    return ata;
+  }
 
   const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
     walletOwner,
     { programId: tokenProgram },
-    "confirmed",
+    COMMITMENT,
   );
 
   const first = tokenAccounts.value.find((entry) => {
@@ -45,7 +58,9 @@ async function resolveBurnSourceAccount(
     if (!parsed || parsed.type !== "account") return false;
     return parsed.info?.mint === CHASE_MINT_PUBLIC_KEY.toBase58();
   })?.pubkey;
-  return first ?? ata;
+  const resolved = first ?? ata;
+  burnSourceAccountCache.set(cacheKey, resolved);
+  return resolved;
 }
 
 /**
@@ -73,32 +88,10 @@ export async function burnOneChaseToken(
       [Buffer.from(PROGRAM_SIGNER_SEED)],
       burnWrapperProgram,
     );
-    const connection = new Connection(
-      process.env.NEXT_PUBLIC_FOGO_RPC_URL ?? DEFAULT_FOGO_RPC,
-      "confirmed",
-    );
     const userTokenAccount = await resolveBurnSourceAccount(
       walletOwner,
       tokenProgram,
     );
-    const tokenAccountInfo = await connection.getParsedAccountInfo(
-      userTokenAccount,
-      "confirmed",
-    );
-    const parsed = tokenAccountInfo.value?.data;
-    if (
-      !parsed ||
-      !("parsed" in parsed) ||
-      parsed.parsed?.type !== "account" ||
-      parsed.parsed?.info?.mint !== CHASE_MINT_PUBLIC_KEY.toBase58()
-    ) {
-      console.warn("Invalid CHASE source token account selected.", {
-        walletOwner: walletOwner.toBase58(),
-        userTokenAccount: userTokenAccount.toBase58(),
-        tokenProgram: tokenProgram.toBase58(),
-      });
-      return false;
-    }
 
     const instruction = new TransactionInstruction({
       programId: burnWrapperProgram,
@@ -117,9 +110,28 @@ export async function burnOneChaseToken(
     });
 
     if (result.type === TransactionResultType.Success) {
-      return true;
+      const confirmation = await connection.confirmTransaction(
+        result.signature,
+        COMMITMENT,
+      );
+      if (confirmation.value.err == null) {
+        return true;
+      }
+      console.warn(
+        "Burn signature failed at confirmed commitment:",
+        JSON.stringify(
+          {
+            signature: result.signature,
+            confirmationError: confirmation.value.err,
+          },
+          null,
+          2,
+        ),
+      );
+      return false;
     }
 
+    burnSourceAccountCache.delete(getBurnSourceCacheKey(walletOwner, tokenProgram));
     console.warn(
       "Burn transaction failed JSON:",
       JSON.stringify(
@@ -134,6 +146,14 @@ export async function burnOneChaseToken(
     );
     return false;
   } catch (error) {
+    if (isEstablished(sessionState)) {
+      burnSourceAccountCache.delete(
+        getBurnSourceCacheKey(
+          sessionState.walletPublicKey,
+          new PublicKey(TOKEN_PROGRAM_ID),
+        ),
+      );
+    }
     console.warn(
       "Burn transaction threw error JSON:",
       JSON.stringify(error, null, 2),
