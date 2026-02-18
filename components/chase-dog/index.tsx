@@ -7,14 +7,17 @@ import { api } from "@/convex/_generated/api";
 import {
   burnOneChaseToken,
   prewarmBurnContext,
-  waitForBurnConfirmed,
 } from "@/lib/burn-chase-token";
 import { getCountryFromIp } from "@/lib/get-country-from-ip";
+import { CHASE_DECIMALS } from "@/lib/chase-token";
+import { emitChaseBalanceDelta } from "@/lib/chase-balance-events";
 import { DogImage } from "./dog-image";
 import { ClickableArea } from "./clickable-area";
 import { BarkCounter } from "./bark-counter";
 import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "react-toastify";
+
+const CHASE_ONE_TOKEN_RAW = BigInt(10 ** CHASE_DECIMALS);
 
 export function ChaseDog() {
   const sessionState = useSession();
@@ -162,9 +165,11 @@ export function ChaseDog() {
 
     // Speculative UI update for instant click feedback.
     setLocalUnseenIncrements((current) => current + 1);
+    emitChaseBalanceDelta(-CHASE_ONE_TOKEN_RAW, "pending");
 
     const burnResult = await burnOneChaseToken(sessionState);
     if (burnResult.success) {
+      emitChaseBalanceDelta(-CHASE_ONE_TOKEN_RAW, "confirmed");
       pendingDbIncrementsRef.current += 1;
       const country = countryRef.current;
       if (!country) {
@@ -173,16 +178,11 @@ export function ChaseDog() {
         });
       }
       scheduleFlush();
-      if (burnResult.signature) {
-        void waitForBurnConfirmed(burnResult.signature).then((isConfirmed) => {
-          if (isConfirmed) {
-            toast.success("1 $CHASE has been burnt.");
-          }
-        });
-      }
+      toast.success("1 $CHASE has been burnt.");
     } else {
       // Burn failed: rollback speculative increment.
       setLocalUnseenIncrements((current) => Math.max(0, current - 1));
+      emitChaseBalanceDelta(CHASE_ONE_TOKEN_RAW, "rollback");
     }
   }, [isLoggedIn, solanaAddress, scheduleFlush, sessionState]);
 

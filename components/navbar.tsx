@@ -12,6 +12,7 @@ import { Trophy, ChevronDown, ExternalLink, Menu } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { CHASE_DECIMALS, CHASE_MINT_PUBLIC_KEY } from "@/lib/chase-token";
+import { onChaseBalanceDelta } from "@/lib/chase-balance-events";
 
 const BUY_CHASE_URL =
   "https://valiant.trade/token/GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz";
@@ -72,29 +73,48 @@ export function Navbar() {
 
   const [rankOpen, setRankOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [chaseBalanceUi, setChaseBalanceUi] = useState("0");
+  const [chaseBalanceRaw, setChaseBalanceRaw] = useState<bigint>(BigInt(0));
+  const [optimisticDeltaRaw, setOptimisticDeltaRaw] = useState<bigint>(
+    BigInt(0),
+  );
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const [isBalanceUpdating, setIsBalanceUpdating] = useState(false);
+  const [pendingConfirmations, setPendingConfirmations] = useState(0);
   const rankRef = useRef<HTMLDivElement>(null);
+  const balanceUpdateTimerRef = useRef<number | null>(null);
+
+  const triggerBalanceUpdateEffect = () => {
+    setIsBalanceUpdating(true);
+    if (balanceUpdateTimerRef.current != null) {
+      window.clearTimeout(balanceUpdateTimerRef.current);
+    }
+    balanceUpdateTimerRef.current = window.setTimeout(() => {
+      setIsBalanceUpdating(false);
+      balanceUpdateTimerRef.current = null;
+    }, 220);
+  };
+
+  const formatBalance = (rawAmount: bigint) => {
+    const divisor = BigInt(10 ** CHASE_DECIMALS);
+    const whole = rawAmount / divisor;
+    const fractional = rawAmount % divisor;
+    const fractionalStr = fractional
+      .toString()
+      .padStart(CHASE_DECIMALS, "0")
+      .slice(0, 2);
+    return `${whole.toString()}.${fractionalStr}`;
+  };
 
   useEffect(() => {
     if (!isLoggedIn) {
-      setChaseBalanceUi("0");
+      setChaseBalanceRaw(BigInt(0));
+      setOptimisticDeltaRaw(BigInt(0));
+      setPendingConfirmations(0);
       setIsBalanceLoading(false);
       return;
     }
 
     let cancelled = false;
-
-    const formatBalance = (rawAmount: bigint) => {
-      const divisor = BigInt(10 ** CHASE_DECIMALS);
-      const whole = rawAmount / divisor;
-      const fractional = rawAmount % divisor;
-      const fractionalStr = fractional
-        .toString()
-        .padStart(CHASE_DECIMALS, "0")
-        .slice(0, 2);
-      return `${whole.toString()}.${fractionalStr}`;
-    };
 
     const refresh = async () => {
       if (!isEstablished(sessionState)) return;
@@ -110,11 +130,14 @@ export function Navbar() {
             account.account.data.parsed.info.tokenAmount.amount ?? "0";
           return sum + BigInt(amount);
         }, BigInt(0));
-        if (!cancelled) setChaseBalanceUi(formatBalance(totalRaw));
+        if (!cancelled) {
+          setChaseBalanceRaw(totalRaw);
+          setOptimisticDeltaRaw(BigInt(0));
+          triggerBalanceUpdateEffect();
+        }
       } catch (error) {
         if (!cancelled) {
           console.warn("Failed to fetch CHASE balance:", error);
-          setChaseBalanceUi("0");
         }
       } finally {
         if (!cancelled) setIsBalanceLoading(false);
@@ -131,6 +154,39 @@ export function Navbar() {
       clearInterval(intervalId);
     };
   }, [connection, isLoggedIn, sessionState]);
+
+  useEffect(() => {
+    const unsubscribe = onChaseBalanceDelta((deltaRaw, phase) => {
+      if (phase === "pending") {
+        setOptimisticDeltaRaw((current) => current + deltaRaw);
+        setPendingConfirmations((current) => current + 1);
+      } else if (phase === "rollback") {
+        setOptimisticDeltaRaw((current) => current + deltaRaw);
+        setPendingConfirmations((current) => Math.max(0, current - 1));
+      } else if (phase === "confirmed") {
+        setChaseBalanceRaw((current) => current + deltaRaw);
+        setOptimisticDeltaRaw((current) => current - deltaRaw);
+        setPendingConfirmations((current) => Math.max(0, current - 1));
+      }
+      triggerBalanceUpdateEffect();
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (balanceUpdateTimerRef.current != null) {
+        window.clearTimeout(balanceUpdateTimerRef.current);
+      }
+    };
+  }, []);
+
+  const displayBalanceRaw = (() => {
+    const value = chaseBalanceRaw + optimisticDeltaRaw;
+    return value < BigInt(0) ? BigInt(0) : value;
+  })();
+  const chaseBalanceUi = formatBalance(displayBalanceRaw);
+  const amountIsTransitioning = pendingConfirmations > 0;
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -209,8 +265,14 @@ export function Navbar() {
               <span className="mr-1.5 text-sm font-medium text-chase-muted">
                 $CHASE
               </span>
-              <span className="text-2xl font-black leading-none tabular-nums text-chase-accent">
-                {isBalanceLoading ? "..." : chaseBalanceUi}
+              <span
+                className={`text-2xl font-black leading-none tabular-nums text-chase-accent transition-all duration-200 ${
+                  amountIsTransitioning
+                    ? "blur-[1px] opacity-80"
+                    : "blur-0 opacity-100"
+                }`}
+              >
+                {chaseBalanceUi}
               </span>
             </div>
           )}
@@ -267,7 +329,7 @@ export function Navbar() {
           solanaAddress={solanaAddress}
           buyChaseUrl={BUY_CHASE_URL}
           chaseBalanceUi={chaseBalanceUi}
-          isBalanceLoading={isBalanceLoading}
+          isBalanceLoading={amountIsTransitioning}
         />
       )}
     </>

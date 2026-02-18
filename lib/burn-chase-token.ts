@@ -128,38 +128,24 @@ export async function burnOneChaseToken(
     });
 
     if (result.type === TransactionResultType.Success) {
-      // Do not block UX and DB update on a second explicit confirmation round-trip.
-      // We still perform a background check for diagnostics.
-      void connection
-        .confirmTransaction(result.signature, COMMITMENT)
-        .then((confirmation) => {
-          if (confirmation.value.err != null) {
-            console.warn(
-              "Burn signature failed at confirmed commitment (post-success):",
-              JSON.stringify(
-                {
-                  signature: result.signature,
-                  confirmationError: confirmation.value.err,
-                },
-                null,
-                2,
-              ),
-            );
-          }
-        })
-        .catch((error) => {
-          console.warn(
-            "Post-success confirmTransaction failed:",
-            JSON.stringify(
-              {
-                signature: result.signature,
-                error,
-              },
-              null,
-              2,
-            ),
-          );
-        });
+      const confirmation = await connection.confirmTransaction(
+        result.signature,
+        COMMITMENT,
+      );
+      if (confirmation.value.err != null) {
+        console.warn(
+          "Burn signature failed at confirmed commitment:",
+          JSON.stringify(
+            {
+              signature: result.signature,
+              confirmationError: confirmation.value.err,
+            },
+            null,
+            2,
+          ),
+        );
+        return { success: false };
+      }
       return {
         success: true,
         signature: result.signature,

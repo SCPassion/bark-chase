@@ -84,8 +84,12 @@ export function NavbarMobilePanel({
           {isLoggedIn && (
             <div className="mx-2 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2">
               <span className="text-sm font-medium text-chase-muted">$CHASE</span>
-              <span className="text-2xl font-black leading-none tabular-nums text-chase-accent">
-                {isBalanceLoading ? "..." : chaseBalanceUi}
+              <span
+                className={`text-2xl font-black leading-none tabular-nums text-chase-accent transition-all duration-200 ${
+                  isBalanceLoading ? "blur-[1px] opacity-80" : "blur-0 opacity-100"
+                }`}
+              >
+                {chaseBalanceUi}
               </span>
             </div>
           )}

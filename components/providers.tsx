@@ -5,7 +5,6 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { FogoSessionProvider, Network } from "@fogo/sessions-sdk-react";
 import { Analytics } from "@vercel/analytics/next";
 import { ConvexFogoSync } from "@/components/convex-fogo-sync";
-import { CHASE_MINT } from "@/lib/chase-token";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -21,13 +20,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
           process.env.NEXT_PUBLIC_FOGO_SESSION_DOMAIN ??
           DEFAULT_FOGO_SESSION_DOMAIN
         }
-        tokens={[
-          NATIVE_MINT.toBase58(),
-          CHASE_MINT,
-        ]}
+        // Keep SDK token tracking minimal to avoid noisy CHASE price polling failures
+        // from the current public Fogo token-price endpoint.
+        // Gameplay burn + CHASE balance logic is handled by app-side code.
+        tokens={[NATIVE_MINT.toBase58()]}
         defaultRequestedLimits={{
           [NATIVE_MINT.toBase58()]: BigInt(1_500_000_000),
-          [CHASE_MINT]: BigInt(10_000_000_000),
         }}
         enableUnlimited
       >
