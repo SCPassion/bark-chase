@@ -120,14 +120,24 @@ export async function burnOneChaseToken(
       return true;
     }
 
-    console.warn("Burn transaction failed:", {
-      signature: result.signature,
-      error: result.error,
-      serializedError: JSON.stringify(result.error),
-    });
+    console.warn(
+      "Burn transaction failed JSON:",
+      JSON.stringify(
+        {
+          signature: result.signature,
+          error: result.error,
+          serializedError: JSON.stringify(result.error),
+        },
+        null,
+        2,
+      ),
+    );
     return false;
   } catch (error) {
-    console.warn("Burn transaction threw error:", error);
+    console.warn(
+      "Burn transaction threw error JSON:",
+      JSON.stringify(error, null, 2),
+    );
     return false;
   }
 }
