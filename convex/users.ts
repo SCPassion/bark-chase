@@ -34,16 +34,23 @@ export const ensureUserRecord = mutation({
 export const incrementClickCount = mutation({
   args: {
     solanaAddress: v.string(),
+    userId: v.optional(v.id("chaseUsers")),
     countryCode: v.optional(v.string()),
     countryName: v.optional(v.string()),
+    countryDocId: v.optional(v.id("countryClicks")),
   },
-  handler: async (ctx, { solanaAddress, countryCode, countryName }) => {
-    const user = await ctx.db
-      .query("chaseUsers")
-      .withIndex("by_solana_address", (q) =>
-        q.eq("solanaAddress", solanaAddress),
-      )
-      .first();
+  handler: async (
+    ctx,
+    { solanaAddress, userId, countryCode, countryName, countryDocId },
+  ) => {
+    const user = userId
+      ? await ctx.db.get(userId)
+      : await ctx.db
+          .query("chaseUsers")
+          .withIndex("by_solana_address", (q) =>
+            q.eq("solanaAddress", solanaAddress),
+          )
+          .first();
 
     if (!user) return null;
 
@@ -51,18 +58,22 @@ export const incrementClickCount = mutation({
       clickCount: user.clickCount + 1,
     });
 
+    let resolvedCountryDocId = countryDocId ?? null;
     if (countryCode != null && countryCode !== "") {
-      const country = await ctx.db
-        .query("countryClicks")
-        .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
-        .first();
+      const country = countryDocId
+        ? await ctx.db.get(countryDocId)
+        : await ctx.db
+            .query("countryClicks")
+            .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
+            .first();
       if (!country) {
-        await ctx.db.insert("countryClicks", {
+        resolvedCountryDocId = await ctx.db.insert("countryClicks", {
           countryCode,
           countryName: countryName ?? countryCode,
           clickCount: 1,
         });
       } else {
+        resolvedCountryDocId = country._id;
         await ctx.db.patch(country._id, {
           clickCount: country.clickCount + 1,
           ...(countryName != null && { countryName }),
@@ -70,7 +81,73 @@ export const incrementClickCount = mutation({
       }
     }
 
-    return user._id;
+    return {
+      userId: user._id,
+      countryDocId: resolvedCountryDocId,
+    };
+  },
+});
+
+/**
+ * Fast path for high-frequency clickers: apply multiple confirmed burns in one DB write.
+ */
+export const incrementClickCountBatch = mutation({
+  args: {
+    solanaAddress: v.string(),
+    userId: v.optional(v.id("chaseUsers")),
+    incrementBy: v.number(),
+    countryCode: v.optional(v.string()),
+    countryName: v.optional(v.string()),
+    countryDocId: v.optional(v.id("countryClicks")),
+  },
+  handler: async (
+    ctx,
+    { solanaAddress, userId, incrementBy, countryCode, countryName, countryDocId },
+  ) => {
+    if (incrementBy <= 0) return null;
+
+    const user = userId
+      ? await ctx.db.get(userId)
+      : await ctx.db
+          .query("chaseUsers")
+          .withIndex("by_solana_address", (q) =>
+            q.eq("solanaAddress", solanaAddress),
+          )
+          .first();
+
+    if (!user) return null;
+
+    await ctx.db.patch(user._id, {
+      clickCount: user.clickCount + incrementBy,
+    });
+
+    let resolvedCountryDocId = countryDocId ?? null;
+    if (countryCode != null && countryCode !== "") {
+      const country = countryDocId
+        ? await ctx.db.get(countryDocId)
+        : await ctx.db
+            .query("countryClicks")
+            .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
+            .first();
+      if (!country) {
+        resolvedCountryDocId = await ctx.db.insert("countryClicks", {
+          countryCode,
+          countryName: countryName ?? countryCode,
+          clickCount: incrementBy,
+        });
+      } else {
+        resolvedCountryDocId = country._id;
+        await ctx.db.patch(country._id, {
+          clickCount: country.clickCount + incrementBy,
+          ...(countryName != null && { countryName }),
+        });
+      }
+    }
+
+    return {
+      userId: user._id,
+      countryDocId: resolvedCountryDocId,
+    };
   },
 });
 

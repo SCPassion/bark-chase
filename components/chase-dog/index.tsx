@@ -4,11 +4,17 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useSession, isEstablished } from "@fogo/sessions-sdk-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { burnOneChaseToken } from "@/lib/burn-chase-token";
+import {
+  burnOneChaseToken,
+  prewarmBurnContext,
+  waitForBurnConfirmed,
+} from "@/lib/burn-chase-token";
 import { getCountryFromIp } from "@/lib/get-country-from-ip";
 import { DogImage } from "./dog-image";
 import { ClickableArea } from "./clickable-area";
 import { BarkCounter } from "./bark-counter";
+import type { Id } from "@/convex/_generated/dataModel";
+import { toast } from "react-toastify";
 
 export function ChaseDog() {
   const sessionState = useSession();
@@ -28,14 +34,19 @@ export function ChaseDog() {
     api.users.getBySolanaAddress,
     solanaAddress ? { solanaAddress } : "skip",
   );
-  const incrementClickCount = useMutation(api.users.incrementClickCount);
+  const incrementClickCountBatch = useMutation(api.users.incrementClickCountBatch);
   const [localUnseenIncrements, setLocalUnseenIncrements] = useState(0);
   const lastServerCountRef = useRef(0);
+  const countryDocIdRef = useRef<Id<"countryClicks"> | null>(null);
+  const pendingDbIncrementsRef = useRef(0);
+  const flushInFlightRef = useRef(false);
+  const flushTimerRef = useRef<number | null>(null);
 
   const clickCount = userRecord?.clickCount ?? 0;
   const displayCount = clickCount + localUnseenIncrements;
   const isConvexLoading = isLoggedIn && userRecord === undefined;
-  const isCountLoading = isInitialLoad || isConvexLoading;
+  const isCountLoading =
+    isInitialLoad || (isConvexLoading && displayCount === 0);
 
   // Reconcile optimistic local increments when server count catches up.
   useEffect(() => {
@@ -84,6 +95,58 @@ export function ChaseDog() {
     };
   }, [isLoggedIn]);
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    void prewarmBurnContext(sessionState).catch((error) => {
+      console.warn("Failed to prewarm burn context:", error);
+    });
+  }, [isLoggedIn, sessionState]);
+
+  const flushPendingDbIncrements = useCallback(async () => {
+    if (!isLoggedIn || !solanaAddress || flushInFlightRef.current) return;
+    const pending = pendingDbIncrementsRef.current;
+    if (pending <= 0) return;
+
+    flushInFlightRef.current = true;
+    pendingDbIncrementsRef.current = 0;
+    try {
+      const country = countryRef.current;
+      const result = await incrementClickCountBatch({
+        solanaAddress,
+        ...(userRecord?._id && { userId: userRecord._id }),
+        ...(countryDocIdRef.current && { countryDocId: countryDocIdRef.current }),
+        incrementBy: pending,
+        ...(country && {
+          countryCode: country.countryCode,
+          countryName: country.countryName,
+        }),
+      });
+      if (result?.countryDocId) {
+        countryDocIdRef.current = result.countryDocId;
+      }
+    } catch (error) {
+      pendingDbIncrementsRef.current += pending;
+      setLocalUnseenIncrements((current) => Math.max(0, current - pending));
+      console.warn("Failed to persist batched click increments:", error);
+    } finally {
+      flushInFlightRef.current = false;
+      if (pendingDbIncrementsRef.current > 0) {
+        if (flushTimerRef.current != null) window.clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = window.setTimeout(() => {
+          void flushPendingDbIncrements();
+        }, 60);
+      }
+    }
+  }, [incrementClickCountBatch, isLoggedIn, solanaAddress, userRecord?._id]);
+
+  const scheduleFlush = useCallback(() => {
+    if (flushTimerRef.current != null) return;
+    flushTimerRef.current = window.setTimeout(() => {
+      flushTimerRef.current = null;
+      void flushPendingDbIncrements();
+    }, 40);
+  }, [flushPendingDbIncrements]);
+
   const handleInteractionStart = useCallback(async () => {
     if (!isLoggedIn || !solanaAddress) return;
 
@@ -97,34 +160,42 @@ export function ChaseDog() {
       });
     }
 
-    const burnSuccess = await burnOneChaseToken(sessionState);
-    if (burnSuccess) {
-      // Update UI immediately; reconcile with Convex query once server catches up.
-      setLocalUnseenIncrements((current) => current + 1);
+    // Speculative UI update for instant click feedback.
+    setLocalUnseenIncrements((current) => current + 1);
+
+    const burnResult = await burnOneChaseToken(sessionState);
+    if (burnResult.success) {
+      pendingDbIncrementsRef.current += 1;
       const country = countryRef.current;
       if (!country) {
         void getCountryFromIp().then((resolved) => {
           if (resolved) countryRef.current = resolved;
         });
       }
-      try {
-        await incrementClickCount({
-          solanaAddress,
-          ...(country && {
-            countryCode: country.countryCode,
-            countryName: country.countryName,
-          }),
+      scheduleFlush();
+      if (burnResult.signature) {
+        void waitForBurnConfirmed(burnResult.signature).then((isConfirmed) => {
+          if (isConfirmed) {
+            toast.success("1 $CHASE has been burnt.");
+          }
         });
-      } catch (error) {
-        // Roll back optimistic increment if DB write fails.
-        setLocalUnseenIncrements((current) => Math.max(0, current - 1));
-        console.warn("Failed to persist click count increment:", error);
       }
+    } else {
+      // Burn failed: rollback speculative increment.
+      setLocalUnseenIncrements((current) => Math.max(0, current - 1));
     }
-  }, [isLoggedIn, solanaAddress, incrementClickCount, sessionState]);
+  }, [isLoggedIn, solanaAddress, scheduleFlush, sessionState]);
 
   const handleInteractionEnd = useCallback(() => {
     setIsMouthOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (flushTimerRef.current != null) {
+        window.clearTimeout(flushTimerRef.current);
+      }
+    };
   }, []);
 
   return (

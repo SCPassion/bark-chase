@@ -21,6 +21,21 @@ const connection = new Connection(
   COMMITMENT,
 );
 const burnSourceAccountCache = new Map<string, PublicKey>();
+const tokenProgramPublicKey = new PublicKey(TOKEN_PROGRAM_ID);
+const burnWrapperProgramPublicKey = BURN_WRAPPER_PROGRAM_ID
+  ? new PublicKey(BURN_WRAPPER_PROGRAM_ID)
+  : null;
+const burnProgramSignerPda = burnWrapperProgramPublicKey
+  ? PublicKey.findProgramAddressSync(
+      [Buffer.from(PROGRAM_SIGNER_SEED)],
+      burnWrapperProgramPublicKey,
+    )[0]
+  : null;
+
+export interface BurnOneChaseResult {
+  success: boolean;
+  signature?: string;
+}
 
 function getBurnSourceCacheKey(walletOwner: PublicKey, tokenProgram: PublicKey) {
   return `${walletOwner.toBase58()}:${tokenProgram.toBase58()}`;
@@ -69,25 +84,28 @@ async function resolveBurnSourceAccount(
  */
 export async function burnOneChaseToken(
   sessionState: SessionState,
-): Promise<boolean> {
-  if (!isEstablished(sessionState)) return false;
+): Promise<BurnOneChaseResult> {
+  if (!isEstablished(sessionState)) return { success: false };
 
   if (!BURN_WRAPPER_PROGRAM_ID) {
     console.warn(
       "Burn wrapper program ID missing. Set NEXT_PUBLIC_BURN_WRAPPER_PROGRAM_ID.",
     );
-    return false;
+    return { success: false };
   }
 
   try {
     const walletOwner = sessionState.walletPublicKey;
     const sessionAuthority = sessionState.sessionPublicKey;
-    const tokenProgram = new PublicKey(TOKEN_PROGRAM_ID);
-    const burnWrapperProgram = new PublicKey(BURN_WRAPPER_PROGRAM_ID);
-    const [programSignerPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from(PROGRAM_SIGNER_SEED)],
-      burnWrapperProgram,
-    );
+    const tokenProgram = tokenProgramPublicKey;
+    const burnWrapperProgram = burnWrapperProgramPublicKey;
+    const programSignerPda = burnProgramSignerPda;
+    if (!burnWrapperProgram || !programSignerPda) {
+      console.warn(
+        "Burn wrapper program ID missing or invalid. Set NEXT_PUBLIC_BURN_WRAPPER_PROGRAM_ID.",
+      );
+      return { success: false };
+    }
     const userTokenAccount = await resolveBurnSourceAccount(
       walletOwner,
       tokenProgram,
@@ -142,7 +160,10 @@ export async function burnOneChaseToken(
             ),
           );
         });
-      return true;
+      return {
+        success: true,
+        signature: result.signature,
+      };
     }
 
     burnSourceAccountCache.delete(getBurnSourceCacheKey(walletOwner, tokenProgram));
@@ -158,13 +179,13 @@ export async function burnOneChaseToken(
         2,
       ),
     );
-    return false;
+    return { success: false };
   } catch (error) {
     if (isEstablished(sessionState)) {
       burnSourceAccountCache.delete(
         getBurnSourceCacheKey(
           sessionState.walletPublicKey,
-          new PublicKey(TOKEN_PROGRAM_ID),
+          tokenProgramPublicKey,
         ),
       );
     }
@@ -172,6 +193,65 @@ export async function burnOneChaseToken(
       "Burn transaction threw error JSON:",
       JSON.stringify(error, null, 2),
     );
+    return { success: false };
+  }
+}
+
+export async function waitForBurnFinalized(signature: string): Promise<boolean> {
+  try {
+    const confirmation = await connection.confirmTransaction(
+      signature,
+      "finalized",
+    );
+    return confirmation.value.err == null;
+  } catch (error) {
+    console.warn(
+      "waitForBurnFinalized failed:",
+      JSON.stringify(
+        {
+          signature,
+          error,
+        },
+        null,
+        2,
+      ),
+    );
     return false;
   }
+}
+
+export async function waitForBurnConfirmed(signature: string): Promise<boolean> {
+  try {
+    const confirmation = await connection.confirmTransaction(
+      signature,
+      "confirmed",
+    );
+    return confirmation.value.err == null;
+  } catch (error) {
+    console.warn(
+      "waitForBurnConfirmed failed:",
+      JSON.stringify(
+        {
+          signature,
+          error,
+        },
+        null,
+        2,
+      ),
+    );
+    return false;
+  }
+}
+
+/**
+ * Warm token account resolution cache to reduce first-click latency.
+ */
+export async function prewarmBurnContext(
+  sessionState: SessionState,
+): Promise<void> {
+  if (!isEstablished(sessionState)) return;
+  await resolveBurnSourceAccount(
+    sessionState.walletPublicKey,
+    tokenProgramPublicKey,
+  );
 }
