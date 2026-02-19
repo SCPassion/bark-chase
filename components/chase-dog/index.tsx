@@ -18,6 +18,10 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "react-toastify";
 
 const CHASE_ONE_TOKEN_RAW = BigInt(10 ** CHASE_DECIMALS);
+const UNKNOWN_COUNTRY = {
+  countryCode: "ZZ",
+  countryName: "Unknown",
+} as const;
 
 export function ChaseDog() {
   const sessionState = useSession();
@@ -144,8 +148,7 @@ export function ChaseDog() {
 
   const flushPendingCountryIncrements = useCallback(async () => {
     if (!isLoggedIn || countryFlushInFlightRef.current) return;
-    const country = countryRef.current;
-    if (!country) return;
+    const country = countryRef.current ?? UNKNOWN_COUNTRY;
     const pending = pendingCountryIncrementsRef.current;
     if (pending <= 0) return;
 
@@ -220,12 +223,11 @@ export function ChaseDog() {
         void getCountryFromIp().then((resolved) => {
           if (resolved) {
             countryRef.current = resolved;
-            scheduleCountryFlush();
           }
         });
-      } else {
-        scheduleCountryFlush();
       }
+      // Always flush country queue quickly; if geo is unavailable we attribute to Unknown.
+      scheduleCountryFlush();
       scheduleFlush();
       toast.success("1 $CHASE has been burnt.");
     } else {
