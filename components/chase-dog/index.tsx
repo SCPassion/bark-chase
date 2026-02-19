@@ -38,12 +38,18 @@ export function ChaseDog() {
     solanaAddress ? { solanaAddress } : "skip",
   );
   const incrementClickCountBatch = useMutation(api.users.incrementClickCountBatch);
+  const incrementCountryClickCountBatch = useMutation(
+    api.users.incrementCountryClickCountBatch,
+  );
   const [localUnseenIncrements, setLocalUnseenIncrements] = useState(0);
   const lastServerCountRef = useRef(0);
   const countryDocIdRef = useRef<Id<"countryClicks"> | null>(null);
   const pendingDbIncrementsRef = useRef(0);
+  const pendingCountryIncrementsRef = useRef(0);
   const flushInFlightRef = useRef(false);
+  const countryFlushInFlightRef = useRef(false);
   const flushTimerRef = useRef<number | null>(null);
+  const countryFlushTimerRef = useRef<number | null>(null);
 
   const clickCount = userRecord?.clickCount ?? 0;
   const displayCount = clickCount + localUnseenIncrements;
@@ -113,19 +119,13 @@ export function ChaseDog() {
     flushInFlightRef.current = true;
     pendingDbIncrementsRef.current = 0;
     try {
-      const country = countryRef.current;
       const result = await incrementClickCountBatch({
         solanaAddress,
         ...(userRecord?._id && { userId: userRecord._id }),
-        ...(countryDocIdRef.current && { countryDocId: countryDocIdRef.current }),
         incrementBy: pending,
-        ...(country && {
-          countryCode: country.countryCode,
-          countryName: country.countryName,
-        }),
       });
-      if (result?.countryDocId) {
-        countryDocIdRef.current = result.countryDocId;
+      if (result?.userId && userRecord?._id == null) {
+        // keep TS happy; source of truth remains Convex query
       }
     } catch (error) {
       pendingDbIncrementsRef.current += pending;
@@ -142,6 +142,41 @@ export function ChaseDog() {
     }
   }, [incrementClickCountBatch, isLoggedIn, solanaAddress, userRecord?._id]);
 
+  const flushPendingCountryIncrements = useCallback(async () => {
+    if (!isLoggedIn || countryFlushInFlightRef.current) return;
+    const country = countryRef.current;
+    if (!country) return;
+    const pending = pendingCountryIncrementsRef.current;
+    if (pending <= 0) return;
+
+    countryFlushInFlightRef.current = true;
+    pendingCountryIncrementsRef.current = 0;
+    try {
+      const result = await incrementCountryClickCountBatch({
+        incrementBy: pending,
+        countryCode: country.countryCode,
+        countryName: country.countryName,
+        ...(countryDocIdRef.current && { countryDocId: countryDocIdRef.current }),
+      });
+      if (result?.countryDocId) {
+        countryDocIdRef.current = result.countryDocId;
+      }
+    } catch (error) {
+      pendingCountryIncrementsRef.current += pending;
+      console.warn("Failed to persist batched country increments:", error);
+    } finally {
+      countryFlushInFlightRef.current = false;
+      if (pendingCountryIncrementsRef.current > 0) {
+        if (countryFlushTimerRef.current != null) {
+          window.clearTimeout(countryFlushTimerRef.current);
+        }
+        countryFlushTimerRef.current = window.setTimeout(() => {
+          void flushPendingCountryIncrements();
+        }, 200);
+      }
+    }
+  }, [incrementCountryClickCountBatch, isLoggedIn]);
+
   const scheduleFlush = useCallback(() => {
     if (flushTimerRef.current != null) return;
     flushTimerRef.current = window.setTimeout(() => {
@@ -149,6 +184,14 @@ export function ChaseDog() {
       void flushPendingDbIncrements();
     }, 40);
   }, [flushPendingDbIncrements]);
+
+  const scheduleCountryFlush = useCallback(() => {
+    if (countryFlushTimerRef.current != null) return;
+    countryFlushTimerRef.current = window.setTimeout(() => {
+      countryFlushTimerRef.current = null;
+      void flushPendingCountryIncrements();
+    }, 40);
+  }, [flushPendingCountryIncrements]);
 
   const handleInteractionStart = useCallback(async () => {
     if (!isLoggedIn || !solanaAddress) return;
@@ -171,11 +214,17 @@ export function ChaseDog() {
     if (burnResult.success) {
       emitChaseBalanceDelta(-CHASE_ONE_TOKEN_RAW, "confirmed");
       pendingDbIncrementsRef.current += 1;
+      pendingCountryIncrementsRef.current += 1;
       const country = countryRef.current;
       if (!country) {
         void getCountryFromIp().then((resolved) => {
-          if (resolved) countryRef.current = resolved;
+          if (resolved) {
+            countryRef.current = resolved;
+            scheduleCountryFlush();
+          }
         });
+      } else {
+        scheduleCountryFlush();
       }
       scheduleFlush();
       toast.success("1 $CHASE has been burnt.");
@@ -184,7 +233,13 @@ export function ChaseDog() {
       setLocalUnseenIncrements((current) => Math.max(0, current - 1));
       emitChaseBalanceDelta(CHASE_ONE_TOKEN_RAW, "rollback");
     }
-  }, [isLoggedIn, solanaAddress, scheduleFlush, sessionState]);
+  }, [
+    isLoggedIn,
+    scheduleCountryFlush,
+    scheduleFlush,
+    sessionState,
+    solanaAddress,
+  ]);
 
   const handleInteractionEnd = useCallback(() => {
     setIsMouthOpen(false);
@@ -194,6 +249,9 @@ export function ChaseDog() {
     return () => {
       if (flushTimerRef.current != null) {
         window.clearTimeout(flushTimerRef.current);
+      }
+      if (countryFlushTimerRef.current != null) {
+        window.clearTimeout(countryFlushTimerRef.current);
       }
     };
   }, []);

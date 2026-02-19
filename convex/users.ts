@@ -43,16 +43,51 @@ export const incrementClickCount = mutation({
     ctx,
     { solanaAddress, userId, countryCode, countryName, countryDocId },
   ) => {
-    const user = userId
-      ? await ctx.db.get(userId)
-      : await ctx.db
-          .query("chaseUsers")
-          .withIndex("by_solana_address", (q) =>
-            q.eq("solanaAddress", solanaAddress),
-          )
-          .first();
+    const userFromId = userId ? await ctx.db.get(userId) : null;
+    const userFromAddress = await ctx.db
+      .query("chaseUsers")
+      .withIndex("by_solana_address", (q) =>
+        q.eq("solanaAddress", solanaAddress),
+      )
+      .first();
+    const user = userFromId ?? userFromAddress;
 
-    if (!user) return null;
+    if (!user) {
+      const insertedUserId = await ctx.db.insert("chaseUsers", {
+        solanaAddress,
+        clickCount: 1,
+      });
+
+      let resolvedCountryDocId = countryDocId ?? null;
+      if (countryCode != null && countryCode !== "") {
+        const country = countryDocId
+          ? await ctx.db.get(countryDocId)
+          : await ctx.db
+              .query("countryClicks")
+              .withIndex("by_country_code", (q) =>
+                q.eq("countryCode", countryCode),
+              )
+              .first();
+        if (!country) {
+          resolvedCountryDocId = await ctx.db.insert("countryClicks", {
+            countryCode,
+            countryName: countryName ?? countryCode,
+            clickCount: 1,
+          });
+        } else {
+          resolvedCountryDocId = country._id;
+          await ctx.db.patch(country._id, {
+            clickCount: country.clickCount + 1,
+            ...(countryName != null && { countryName }),
+          });
+        }
+      }
+
+      return {
+        userId: insertedUserId,
+        countryDocId: resolvedCountryDocId,
+      };
+    }
 
     await ctx.db.patch(user._id, {
       clickCount: user.clickCount + 1,
@@ -96,57 +131,78 @@ export const incrementClickCountBatch = mutation({
     solanaAddress: v.string(),
     userId: v.optional(v.id("chaseUsers")),
     incrementBy: v.number(),
-    countryCode: v.optional(v.string()),
-    countryName: v.optional(v.string()),
-    countryDocId: v.optional(v.id("countryClicks")),
   },
-  handler: async (
-    ctx,
-    { solanaAddress, userId, incrementBy, countryCode, countryName, countryDocId },
-  ) => {
+  handler: async (ctx, { solanaAddress, userId, incrementBy }) => {
     if (incrementBy <= 0) return null;
 
-    const user = userId
-      ? await ctx.db.get(userId)
-      : await ctx.db
-          .query("chaseUsers")
-          .withIndex("by_solana_address", (q) =>
-            q.eq("solanaAddress", solanaAddress),
-          )
-          .first();
+    const userFromId = userId ? await ctx.db.get(userId) : null;
+    const userFromAddress = await ctx.db
+      .query("chaseUsers")
+      .withIndex("by_solana_address", (q) =>
+        q.eq("solanaAddress", solanaAddress),
+      )
+      .first();
+    const user = userFromId ?? userFromAddress;
 
-    if (!user) return null;
+    if (!user) {
+      const insertedUserId = await ctx.db.insert("chaseUsers", {
+        solanaAddress,
+        clickCount: incrementBy,
+      });
+      return {
+        userId: insertedUserId,
+      };
+    }
 
     await ctx.db.patch(user._id, {
       clickCount: user.clickCount + incrementBy,
     });
 
-    let resolvedCountryDocId = countryDocId ?? null;
-    if (countryCode != null && countryCode !== "") {
-      const country = countryDocId
-        ? await ctx.db.get(countryDocId)
-        : await ctx.db
-            .query("countryClicks")
-            .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
-            .first();
-      if (!country) {
-        resolvedCountryDocId = await ctx.db.insert("countryClicks", {
-          countryCode,
-          countryName: countryName ?? countryCode,
-          clickCount: incrementBy,
-        });
-      } else {
-        resolvedCountryDocId = country._id;
-        await ctx.db.patch(country._id, {
-          clickCount: country.clickCount + incrementBy,
-          ...(countryName != null && { countryName }),
-        });
-      }
-    }
-
     return {
       userId: user._id,
-      countryDocId: resolvedCountryDocId,
+    };
+  },
+});
+
+/**
+ * Country-only fast path to ensure every confirmed click is eventually attributed by country.
+ * This is intentionally separated from user click increments so delayed geo resolution
+ * cannot drop country counts.
+ */
+export const incrementCountryClickCountBatch = mutation({
+  args: {
+    incrementBy: v.number(),
+    countryCode: v.string(),
+    countryName: v.string(),
+    countryDocId: v.optional(v.id("countryClicks")),
+  },
+  handler: async (ctx, { incrementBy, countryCode, countryName, countryDocId }) => {
+    if (incrementBy <= 0) return null;
+
+    const country = countryDocId
+      ? await ctx.db.get(countryDocId)
+      : await ctx.db
+          .query("countryClicks")
+          .withIndex("by_country_code", (q) => q.eq("countryCode", countryCode))
+          .first();
+
+    if (!country) {
+      const inserted = await ctx.db.insert("countryClicks", {
+        countryCode,
+        countryName,
+        clickCount: incrementBy,
+      });
+      return {
+        countryDocId: inserted,
+      };
+    }
+
+    await ctx.db.patch(country._id, {
+      clickCount: country.clickCount + incrementBy,
+      countryName,
+    });
+    return {
+      countryDocId: country._id,
     };
   },
 });
