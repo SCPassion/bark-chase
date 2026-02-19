@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useQuery } from "convex/react";
 import {
   useConnection,
   useSession,
@@ -13,6 +14,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { CHASE_DECIMALS, CHASE_MINT_PUBLIC_KEY } from "@/lib/chase-token";
 import { onChaseBalanceDelta } from "@/lib/chase-balance-events";
+import { api } from "@/convex/_generated/api";
 
 const BUY_CHASE_URL =
   "https://valiant.trade/token/GPK71dya1H975s3U4gYaJjrRCp3BGyAD8fmZCtSmBCcz";
@@ -80,6 +82,7 @@ export function Navbar() {
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [isBalanceUpdating, setIsBalanceUpdating] = useState(false);
   const [pendingConfirmations, setPendingConfirmations] = useState(0);
+  const totalBurnedData = useQuery(api.users.getTotalBurnedChase, {});
   const rankRef = useRef<HTMLDivElement>(null);
   const balanceUpdateTimerRef = useRef<number | null>(null);
 
@@ -187,6 +190,7 @@ export function Navbar() {
   })();
   const chaseBalanceUi = formatBalance(displayBalanceRaw);
   const amountIsTransitioning = pendingConfirmations > 0;
+  const totalBurnedUi = (totalBurnedData?.totalBurned ?? 0).toLocaleString();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -260,6 +264,17 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
+          <div className="hidden md:flex h-10 items-center rounded-xl border border-white/10 bg-black/30 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <span className="mr-1.5 text-xs font-semibold uppercase tracking-wide text-chase-muted">
+              Burned
+            </span>
+            <span className="text-base font-black leading-none tabular-nums text-chase-accent">
+              {totalBurnedUi}
+            </span>
+            <span className="ml-1.5 text-xs font-medium text-chase-muted">
+              $CHASE
+            </span>
+          </div>
           {isLoggedIn && (
             <div className="hidden md:flex h-10 items-center rounded-xl border border-white/10 bg-black/30 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <span className="mr-1.5 text-sm font-medium text-chase-muted">
@@ -329,6 +344,7 @@ export function Navbar() {
           solanaAddress={solanaAddress}
           buyChaseUrl={BUY_CHASE_URL}
           chaseBalanceUi={chaseBalanceUi}
+          totalBurnedUi={totalBurnedUi}
           isBalanceLoading={amountIsTransitioning}
         />
       )}

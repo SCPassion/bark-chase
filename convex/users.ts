@@ -223,6 +223,22 @@ export const getBySolanaAddress = query({
 });
 
 /**
+ * Total number of successful burns recorded by the app.
+ * 1 click = 1 burned $CHASE token.
+ */
+export const getTotalBurnedChase = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("chaseUsers").collect();
+    const totalBurned = all.reduce((sum, user) => sum + user.clickCount, 0);
+    return {
+      totalBurned,
+      totalUsers: all.length,
+    };
+  },
+});
+
+/**
  * Get the current user's rank by click count (1 = highest). Returns null if user not found.
  */
 export const getUserRank = query({
